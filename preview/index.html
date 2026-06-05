@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shop by Therum — pattern gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --ac:   #e83b3b;
+    --ac-h: #c92e2e;
+    --ac-s: rgba(232, 59, 59, 0.08);
+    --sf:   #ffffff;
+    --sf2:  #f7f7f6;
+    --sf3:  #fafaf9;
+    --bd:   rgba(0, 0, 0, 0.08);
+    --bd2:  rgba(0, 0, 0, 0.16);
+    --bg:   #f4f3f0;
+    --tx:   #0a0a0a;
+    --tx2:  #666;
+    --tx3:  #999;
+    --f:    -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r:    10px;
+    --r-lg: 14px;
+    --e:    0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font: 14px/1.5 var(--f);
+    color: var(--tx);
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Top bar ───────────────────────────────────────────────────── */
+  .top {
+    background: var(--sf);
+    border-bottom: 1px solid var(--bd);
+    padding: 14px 28px;
+    display: flex; align-items: center; gap: 16px;
+    flex-shrink: 0;
+  }
+  .brand-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--ac); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; }
+  .top__title {
+    font: 700 14px var(--f); letter-spacing: -.005em;
+  }
+  .top__title small { color: var(--tx3); font-weight: 500; margin-left: 6px; }
+  .top__active {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 500 11px var(--mono);
+    color: var(--tx3);
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+  .top__active b {
+    color: var(--tx); font-weight: 700; font-family: var(--f); font-size: 13px;
+    letter-spacing: -.005em; text-transform: none;
+  }
+  .top__open {
+    border: 1px solid var(--bd); background: var(--sf);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font: 600 12px var(--f); color: var(--tx);
+    text-decoration: none;
+    transition: background var(--e), border-color var(--e);
+  }
+  .top__open:hover { background: var(--sf2); border-color: var(--bd2); }
+
+  /* ── Group label rail ─────────────────────────────────────────── */
+  .tabs {
+    background: var(--sf);
+    border-bottom: 1px solid var(--bd);
+    padding: 0 28px;
+    display: flex; gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 0;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-group {
+    display: flex; align-items: stretch;
+    padding-right: 24px;
+    border-right: 1px solid var(--bd);
+    margin-right: 24px;
+  }
+  .tab-group:last-child { border-right: 0; margin-right: 0; }
+  .tab-group__label {
+    align-self: center;
+    font: 600 10px var(--mono);
+    color: var(--tx3);
+    letter-spacing: .12em; text-transform: uppercase;
+    margin-right: 12px;
+    white-space: nowrap;
+  }
+
+  .tab {
+    border: 0; background: transparent;
+    padding: 14px 14px 12px;
+    font: 600 13px var(--f); color: var(--tx2);
+    cursor: pointer;
+    position: relative;
+    white-space: nowrap;
+    transition: color var(--e);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--tx); }
+  .tab.active {
+    color: var(--ac);
+    border-bottom-color: var(--ac);
+  }
+  .tab__sub {
+    display: block;
+    font: 500 10px var(--mono);
+    color: var(--tx3);
+    letter-spacing: .04em; text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .tab.active .tab__sub { color: rgba(232,59,59,0.7); }
+
+  /* ── Description strip ────────────────────────────────────────── */
+  .desc {
+    background: var(--bg);
+    border-bottom: 1px solid var(--bd);
+    padding: 12px 28px;
+    display: flex; align-items: center; gap: 16px;
+    font-size: 13px; color: var(--tx2);
+    flex-shrink: 0;
+  }
+  .desc strong { color: var(--tx); font-weight: 700; }
+
+  /* ── Frame container ──────────────────────────────────────────── */
+  .frame-wrap {
+    flex: 1;
+    background: var(--bg);
+    padding: 16px;
+    overflow: hidden;
+  }
+  .frame {
+    width: 100%; height: 100%;
+    background: var(--sf);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: 0 8px 28px rgba(0,0,0,.06);
+  }
+  iframe {
+    width: 100%; height: 100%;
+    border: 0;
+    display: block;
+  }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand-mark">T</div>
+  <div class="top__title">Shop by Therum <small>· Pattern gallery</small></div>
+  <div class="top__active">Viewing <b id="activeLabel">Studio</b></div>
+  <button class="top__open" id="walkFlow" type="button" style="border:0;background:var(--ac);color:#fff;cursor:pointer">▶ Walk the flow</button>
+  <a class="top__open" id="openInNewTab" href="/preview/studio.html" target="_blank">Open standalone ↗</a>
+</div>
+
+<nav class="tabs">
+
+  <div class="tab-group">
+    <span class="tab-group__label">Studio</span>
+    <button class="tab active" data-src="/preview/studio.html" data-label="Studio · Cart" data-desc="Drawer · Thumbnails, brand + variant, in-drawer multi-stage checkout. Click ‘Checkout’ inside to slide to the in-drawer payment flow.">
+      Cart <span class="tab__sub">Drawer</span>
+    </button>
+    <button class="tab" data-src="/preview/studio.html" data-label="Studio · Checkout" data-desc="In-drawer checkout — same drawer panel, slides from cart view to Info → Shipping → Payment. Click ‘Checkout’ inside the drawer to see the transition.">
+      Checkout <span class="tab__sub">In-drawer</span>
+    </button>
+    <button class="tab" data-src="/preview/received-studio.html" data-label="Studio · Received" data-desc="In-drawer confirmation — the same drawer panel slides to its third state with the animated check, order number, item recap, totals paid, and next-step tiles.">
+      Received <span class="tab__sub">In-drawer</span>
+    </button>
+  </div>
+
+  <div class="tab-group">
+    <span class="tab-group__label">Counter</span>
+    <button class="tab" data-src="/preview/counter.html" data-label="Counter · Cart" data-desc="Full /cart/ page with the dark footer panel. Order notes, shipping calculator, terms agreement, express PayPal.">
+      Cart <span class="tab__sub">Page</span>
+    </button>
+    <button class="tab" data-src="/preview/classic.html" data-label="Counter · Checkout" data-desc="Counter pairs with Classic checkout — same page silhouette, dark-footer aesthetic carries through.">
+      Checkout <span class="tab__sub">Stacked</span>
+    </button>
+    <button class="tab" data-src="/preview/received-counter.html" data-label="Counter · Received" data-desc="Page · Dark-footer aesthetic carried into a hero banner. Status-pilled items table with diagonal accent corners, dark panel pairs ‘What happens next’ left with ‘Total paid’ right.">
+      Received <span class="tab__sub">Page</span>
+    </button>
+  </div>
+
+  <div class="tab-group">
+    <span class="tab-group__label">Vitrine</span>
+    <button class="tab" data-src="/preview/vitrine.html" data-label="Vitrine · Cart" data-desc="Modal overlay with big thumbnails, save-for-later, payment trust strip.">
+      Cart <span class="tab__sub">Modal</span>
+    </button>
+    <button class="tab" data-src="/preview/vitrine.html" data-label="Vitrine · Checkout" data-desc="Modal stepped through Info → Pay → Done — same dialog, swaps content.">
+      Checkout <span class="tab__sub">Modal</span>
+    </button>
+    <button class="tab" data-src="/preview/received-vitrine.html" data-label="Vitrine · Received" data-desc="Modal · Same dialog, swaps to confirmed state. Header gets the green check pill, big animated check in the hero, receipt-style item lines with unit + total, trust footer.">
+      Received <span class="tab__sub">Modal</span>
+    </button>
+  </div>
+
+  <div class="tab-group">
+    <span class="tab-group__label">Classic</span>
+    <button class="tab" data-src="/preview/cart-classic.html" data-label="Classic · Cart" data-desc="Sectioned page with numbered ‘Review your items’ card + sticky summary right. Carries the crumb (Cart › Information › Shipping › Payment) into the checkout.">
+      Cart <span class="tab__sub">Sections</span>
+    </button>
+    <button class="tab" data-src="/preview/classic.html" data-label="Classic · Checkout" data-desc="Sections stacked — Info / Shipping / Payment with focus-glow rings. Six payment rails. Pay button label adapts per method.">
+      Checkout <span class="tab__sub">Stacked</span>
+    </button>
+    <button class="tab" data-src="/preview/received-classic.html" data-label="Classic · Received" data-desc="Sectioned page · Crumb shows all four stages with green checks, ‘Confirmed’ in bold. Hero panel in soft red with the order number, sectioned items + next-steps cards, sticky paid-tag summary.">
+      Received <span class="tab__sub">Sections</span>
+    </button>
+  </div>
+
+  <div class="tab-group">
+    <span class="tab-group__label">Therum</span>
+    <button class="tab" data-src="/preview/cart-therum.html" data-label="Therum · Cart" data-desc="Editable summary card with inline variant selects, discount code, upsell + ‘Ready to check out’ panel on the right with quick-pay buttons.">
+      Cart <span class="tab__sub">Stripe-style</span>
+    </button>
+    <button class="tab" data-src="/preview/checkout.html" data-label="Therum · Checkout" data-desc="Same editable summary left, payment form right — the cart panel persists through checkout.">
+      Checkout <span class="tab__sub">Summary + Form</span>
+    </button>
+    <button class="tab" data-src="/preview/received-therum.html" data-label="Therum · Received" data-desc="Stripe-style · Editable summary stays on the left, payment form replaced by a receipt panel on the right (transaction ID, method, paid-at, status). Crumb shows all stages confirmed.">
+      Received <span class="tab__sub">Receipt</span>
+    </button>
+  </div>
+
+  <div class="tab-group">
+    <span class="tab-group__label">Sequence</span>
+    <button class="tab" data-src="/preview/cart-sequence.html" data-label="Sequence · Cart" data-desc="Step 1 of the stepper — ‘Review’ active, with persistent left summary. Cart is the entry stage of the same 4-step flow.">
+      Cart <span class="tab__sub">Step 1</span>
+    </button>
+    <button class="tab" data-src="/preview/sequence.html" data-label="Sequence · Checkout" data-desc="Same stepper, advances to Step 2 (Information) and 3 (Payment) with the same persistent summary on the left.">
+      Checkout <span class="tab__sub">Steps 2-3</span>
+    </button>
+    <button class="tab" data-src="/preview/received-sequence.html" data-label="Sequence · Received" data-desc="Step 4 of 4 · Stepper shows three green-checked done steps + active ‘Completed’ at the end. Persistent left summary now has a ‘Paid’ pill. Big animated check + next-step tiles + CTAs on the right.">
+      Received <span class="tab__sub">Step 4</span>
+    </button>
+  </div>
+
+</nav>
+
+<div class="desc" id="desc">
+  <strong>Studio</strong> — Drawer · Thumbnails, brand + variant, in-drawer multi-stage checkout. Click ‘Checkout’ inside to slide to the in-drawer payment flow.
+</div>
+
+<div class="frame-wrap">
+  <div class="frame">
+    <iframe id="frame" src="/preview/studio.html" title="Pattern preview"></iframe>
+  </div>
+</div>
+
+<script>
+  ( function () {
+    var tabs       = document.querySelectorAll( '.tab' );
+    var frame      = document.getElementById( 'frame' );
+    var desc       = document.getElementById( 'desc' );
+    var label      = document.getElementById( 'activeLabel' );
+    var openBtn    = document.getElementById( 'openInNewTab' );
+
+    tabs.forEach( function ( btn ) {
+      btn.addEventListener( 'click', function () {
+        tabs.forEach( function ( b ) { b.classList.remove( 'active' ); } );
+        btn.classList.add( 'active' );
+
+        var src = btn.getAttribute( 'data-src' );
+        var lbl = btn.getAttribute( 'data-label' );
+        var d   = btn.getAttribute( 'data-desc' );
+
+        frame.src = src;
+        label.textContent = lbl;
+        openBtn.href = src;
+        desc.innerHTML = '<strong>' + lbl + '</strong> — ' + d;
+      } );
+    } );
+
+    // Keyboard arrows to step between
+    document.addEventListener( 'keydown', function ( e ) {
+      if ( e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' ) return;
+      if ( e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' ) return;
+      var active = document.querySelector( '.tab.active' );
+      var list   = Array.from( tabs );
+      var i      = list.indexOf( active );
+      var next   = e.key === 'ArrowRight'
+        ? list[ ( i + 1 ) % list.length ]
+        : list[ ( i - 1 + list.length ) % list.length ];
+      next.click();
+    } );
+
+    // ─── "Walk the flow" — auto-advance through cart → checkout → confirmation
+    var walkBtn = document.getElementById( 'walkFlow' );
+    var walking = false;
+    walkBtn.addEventListener( 'click', function () {
+      if ( walking ) return;
+      walking = true;
+      walkBtn.textContent = '⏸ Stop';
+
+      function find( labelText ) {
+        return Array.from( tabs ).find( function ( t ) {
+          return t.getAttribute( 'data-label' ) === labelText;
+        } );
+      }
+
+      var stops = [
+        { tab: find( 'Studio' ),         dwell: 3500 },
+        { tab: find( 'Classic' ),        dwell: 3500 },
+        { tab: find( 'Order Received' ), dwell: 4500 },
+      ].filter( function ( s ) { return s.tab; } );
+
+      var i = 0;
+      function step() {
+        if ( ! walking || i >= stops.length ) {
+          walking = false;
+          walkBtn.textContent = '▶ Walk the flow';
+          return;
+        }
+        stops[ i ].tab.click();
+        setTimeout( step, stops[ i ].dwell );
+        i++;
+      }
+      step();
+    } );
+  } )();
+</script>
+
+</body>
+</html>

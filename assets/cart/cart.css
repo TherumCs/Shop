@@ -1,0 +1,445 @@
+/**
+ * Shop by Therum — cart structural CSS.
+ *
+ * Design tokens come from the Therum OS chrome (matches checkout-experience.html):
+ *   accent       #e83b3b   accent-hover #c92e2e   accent-soft rgba(232,59,59,.08)
+ *   surface      #ffffff   surface-2     #f7f7f6   surface-3   #fafaf9
+ *   border       rgba(0,0,0,.08)   border-2 rgba(0,0,0,.16)
+ *   text         #0a0a0a   text-2  #666   text-3  #999
+ *   radius       10px      radius-lg 14px
+ *   ease         .22s cubic-bezier(.22,.61,.36,1)
+ *
+ * All exposed as custom properties so a site can rebrand by setting any of
+ * them on `:root` or `.shop-cart-drawer`/etc. — no edits to this file needed.
+ */
+
+:root {
+	--shop-cart-accent:        #e83b3b;
+	--shop-cart-accent-hover:  #c92e2e;
+	--shop-cart-accent-soft:   rgba(232, 59, 59, 0.08);
+	--shop-cart-accent-text:   #ffffff;
+	--shop-cart-surface:       #ffffff;
+	--shop-cart-surface-2:     #f7f7f6;
+	--shop-cart-surface-3:     #fafaf9;
+	--shop-cart-border:        rgba(0, 0, 0, 0.08);
+	--shop-cart-border-2:      rgba(0, 0, 0, 0.16);
+	--shop-cart-text:          #0a0a0a;
+	--shop-cart-text-2:        #666666;
+	--shop-cart-text-3:        #999999;
+	--shop-cart-ok:            #10b981;
+	--shop-cart-radius:        10px;
+	--shop-cart-radius-lg:     14px;
+	--shop-cart-ease:          0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+	--shop-cart-font:          -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+	--shop-cart-mono:          "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+	--shop-cart-drawer-width:  420px;
+	--shop-cart-z-shell:       9000;
+	--shop-cart-z-fab:         8500;
+}
+
+/* ─── Floating action button ────────────────────────────────────────────── */
+
+.shop-cart-fab {
+	position: fixed;
+	z-index: var(--shop-cart-z-fab);
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.7rem 1.05rem;
+	border: none;
+	border-radius: 999px;
+	background: var(--shop-cart-accent);
+	color: var(--shop-cart-accent-text);
+	cursor: pointer;
+	font-family: var(--shop-cart-font);
+	font-weight: 700;
+	font-size: 13px;
+	letter-spacing: -0.005em;
+	box-shadow: 0 10px 28px rgba(232, 59, 59, 0.28),
+	            0 2px 8px rgba(0, 0, 0, 0.06);
+	transition: transform 0.18s var(--shop-cart-ease),
+	            background 0.18s var(--shop-cart-ease),
+	            box-shadow 0.18s var(--shop-cart-ease);
+}
+.shop-cart-fab:hover {
+	background: var(--shop-cart-accent-hover);
+	transform: translateY(-2px);
+	box-shadow: 0 14px 36px rgba(232, 59, 59, 0.32),
+	            0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.shop-cart-fab:active { transform: translateY(0); }
+.shop-cart-fab--bottom-right { bottom: 1.5rem; right: 1.5rem; }
+.shop-cart-fab--bottom-left  { bottom: 1.5rem; left:  1.5rem; }
+.shop-cart-fab--top-right    { top:    1.5rem; right: 1.5rem; }
+.shop-cart-fab--top-left     { top:    1.5rem; left:  1.5rem; }
+.shop-cart-fab__icon  { width: 1.1rem; height: 1.1rem; }
+.shop-cart-fab__count {
+	min-width: 1.2rem;
+	height: 1.2rem;
+	padding: 0 0.4rem;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.95);
+	color: var(--shop-cart-accent);
+	font-family: var(--shop-cart-mono);
+	font-size: 11px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* ─── Drawer shell ─────────────────────────────────────────────────────── */
+
+.shop-cart-drawer {
+	position: fixed;
+	inset: 0;
+	z-index: var(--shop-cart-z-shell);
+	pointer-events: none;
+	font-family: var(--shop-cart-font);
+	color: var(--shop-cart-text);
+}
+.shop-cart-drawer[data-shop-cart-state="open"] { pointer-events: auto; }
+
+.shop-cart-drawer__backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(10, 10, 10, 0.42);
+	backdrop-filter: blur(2px);
+	opacity: 0;
+	transition: opacity 0.28s var(--shop-cart-ease);
+}
+.shop-cart-drawer[data-shop-cart-state="open"] .shop-cart-drawer__backdrop {
+	opacity: 1;
+}
+
+.shop-cart-drawer__panel {
+	position: absolute;
+	top: 0;
+	right: 0;
+	height: 100%;
+	width: 100%;
+	max-width: var(--shop-cart-drawer-width);
+	background: var(--shop-cart-surface);
+	transform: translateX(100%);
+	transition: transform 0.36s var(--shop-cart-ease);
+	display: flex;
+	flex-direction: column;
+	box-shadow: -24px 0 60px rgba(0, 0, 0, 0.08);
+}
+.shop-cart-drawer[data-shop-cart-state="open"] .shop-cart-drawer__panel {
+	transform: translateX(0);
+}
+
+.shop-cart-drawer__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 20px 24px;
+	border-bottom: 1px solid var(--shop-cart-border);
+}
+.shop-cart-drawer__title {
+	margin: 0;
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--shop-cart-text-3);
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+.shop-cart-drawer__count {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 0.5rem;
+	border-radius: 50%;
+	background: var(--shop-cart-surface-2);
+	color: var(--shop-cart-text-2);
+	font-family: var(--shop-cart-mono);
+	font-size: 11px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+	text-transform: none;
+}
+.shop-cart-drawer__close {
+	border: none;
+	background: transparent;
+	font-size: 22px;
+	line-height: 1;
+	color: var(--shop-cart-text-3);
+	cursor: pointer;
+	padding: 0.25rem 0.5rem;
+	border-radius: var(--shop-cart-radius);
+	transition: background 0.15s var(--shop-cart-ease),
+	            color      0.15s var(--shop-cart-ease);
+}
+.shop-cart-drawer__close:hover {
+	background: var(--shop-cart-surface-2);
+	color: var(--shop-cart-text);
+}
+.shop-cart-drawer__body {
+	flex: 1;
+	overflow-y: auto;
+	padding: 20px 24px 24px;
+}
+
+/* ─── Page shell ───────────────────────────────────────────────────────── */
+
+.shop-cart-page {
+	max-width: 720px;
+	margin: 2rem auto;
+	padding: 24px 28px;
+	font-family: var(--shop-cart-font);
+	color: var(--shop-cart-text);
+	background: var(--shop-cart-surface);
+	border: 1px solid var(--shop-cart-border);
+	border-radius: var(--shop-cart-radius-lg);
+}
+.shop-cart-page__title {
+	margin: 0 0 1.25rem;
+	font-size: 1.5rem;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+
+/* ─── Mini-cart shell ──────────────────────────────────────────────────── */
+
+.shop-cart-mini {
+	position: absolute;
+	min-width: 340px;
+	padding: 20px;
+	background: var(--shop-cart-surface);
+	border: 1px solid var(--shop-cart-border);
+	border-radius: var(--shop-cart-radius-lg);
+	box-shadow: 0 18px 40px rgba(0, 0, 0, 0.1);
+	font-family: var(--shop-cart-font);
+	color: var(--shop-cart-text);
+	display: none;
+}
+.shop-cart-mini[data-shop-cart-state="open"] { display: block; }
+
+/* ─── Cart contents (shared) ───────────────────────────────────────────── */
+
+.shop-cart { font-family: var(--shop-cart-font); }
+
+.shop-cart__empty {
+	padding: 3rem 0;
+	text-align: center;
+}
+.shop-cart__empty-title {
+	margin: 0 0 0.35rem;
+	font-weight: 700;
+	font-size: 14px;
+	color: var(--shop-cart-text);
+}
+.shop-cart__empty-sub {
+	margin: 0;
+	color: var(--shop-cart-text-3);
+	font-size: 13px;
+}
+
+/* Line items */
+.shop-cart__items {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+.shop-cart__item {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	column-gap: 1rem;
+	row-gap: 0.5rem;
+	padding: 14px 0;
+	border-bottom: 1px solid var(--shop-cart-border);
+}
+.shop-cart__item:last-child { border-bottom: 0; }
+
+.shop-cart__item-info {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+.shop-cart__item-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--shop-cart-text);
+	line-height: 1.35;
+}
+.shop-cart__item-variant {
+	display: block;
+	margin-top: 2px;
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--shop-cart-text-3);
+	letter-spacing: 0.005em;
+}
+.shop-cart__item-price {
+	font-family: var(--shop-cart-mono);
+	font-size: 13px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	color: var(--shop-cart-text);
+	white-space: nowrap;
+}
+
+.shop-cart__item-controls {
+	grid-column: 1 / -1;
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+/* Qty stepper — mirrors the .input pattern from checkout chrome */
+.shop-cart__qty {
+	display: inline-flex;
+	align-items: stretch;
+	background: var(--shop-cart-surface-2);
+	border: 1px solid transparent;
+	border-radius: var(--shop-cart-radius);
+	overflow: hidden;
+	transition: background 0.15s var(--shop-cart-ease),
+	            border-color 0.15s var(--shop-cart-ease);
+}
+.shop-cart__qty:focus-within {
+	background: var(--shop-cart-surface);
+	border-color: var(--shop-cart-accent);
+	box-shadow: 0 0 0 4px var(--shop-cart-accent-soft);
+}
+.shop-cart__qty-btn {
+	width: 28px;
+	border: none;
+	background: transparent;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--shop-cart-text-2);
+	cursor: pointer;
+	transition: color 0.15s var(--shop-cart-ease);
+}
+.shop-cart__qty-btn:hover { color: var(--shop-cart-accent); }
+.shop-cart__qty-input {
+	width: 32px;
+	border: none;
+	background: transparent;
+	text-align: center;
+	font-family: var(--shop-cart-mono);
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+	color: var(--shop-cart-text);
+	outline: 0;
+}
+.shop-cart__qty-input::-webkit-inner-spin-button,
+.shop-cart__qty-input::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+.shop-cart__remove {
+	border: none;
+	background: transparent;
+	color: var(--shop-cart-text-3);
+	cursor: pointer;
+	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+	transition: color 0.15s var(--shop-cart-ease);
+}
+.shop-cart__remove:hover { color: var(--shop-cart-accent); }
+
+.shop-cart__line-total {
+	margin-left: auto;
+	font-family: var(--shop-cart-mono);
+	font-size: 13px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	color: var(--shop-cart-text);
+}
+
+/* Summary — mirrors checkout's .totals block */
+.shop-cart__summary {
+	margin-top: 18px;
+	padding-top: 14px;
+	border-top: 1px solid var(--shop-cart-border);
+}
+.shop-cart__row {
+	display: flex;
+	justify-content: space-between;
+	padding: 4px 0;
+	font-size: 13px;
+	color: var(--shop-cart-text-2);
+	font-variant-numeric: tabular-nums;
+}
+.shop-cart__row > span:last-child {
+	font-family: var(--shop-cart-mono);
+}
+.shop-cart__row--discount { color: var(--shop-cart-ok); }
+.shop-cart__row--total {
+	margin-top: 10px;
+	padding-top: 12px;
+	border-top: 1px solid var(--shop-cart-border);
+	color: var(--shop-cart-text);
+	font-size: 16px;
+	font-weight: 700;
+}
+
+/* Checkout button — mirrors .pay-btn from checkout chrome */
+.shop-cart__actions { margin-top: 18px; }
+.shop-cart__checkout {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	width: 100%;
+	height: 52px;
+	padding: 0 1.1rem;
+	background: var(--shop-cart-accent);
+	color: var(--shop-cart-accent-text);
+	border-radius: var(--shop-cart-radius);
+	text-decoration: none;
+	font-family: var(--shop-cart-font);
+	font-weight: 700;
+	font-size: 15px;
+	letter-spacing: 0.005em;
+	font-variant-numeric: tabular-nums;
+	transition: background 0.18s var(--shop-cart-ease),
+	            transform  0.18s var(--shop-cart-ease),
+	            box-shadow 0.18s var(--shop-cart-ease);
+}
+.shop-cart__checkout:hover {
+	background: var(--shop-cart-accent-hover);
+	transform: translateY(-1px);
+	box-shadow: 0 10px 24px rgba(232, 59, 59, 0.22);
+}
+.shop-cart__checkout:active { transform: translateY(0); }
+.shop-cart__checkout-total {
+	font-family: var(--shop-cart-mono);
+	font-weight: 700;
+}
+
+/* ─── Toast ────────────────────────────────────────────────────────────── */
+
+.shop-cart-toast {
+	position: fixed;
+	bottom: 1.5rem;
+	left: 50%;
+	transform: translateX(-50%);
+	padding: 0.85rem 1.25rem;
+	background: var(--shop-cart-text);
+	color: #ffffff;
+	border-radius: var(--shop-cart-radius);
+	z-index: 10000;
+	font-family: var(--shop-cart-font);
+	font-size: 13px;
+	font-weight: 500;
+	box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+}

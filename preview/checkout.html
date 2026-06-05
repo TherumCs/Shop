@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shop by Therum — Checkout preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --ac:   #e83b3b;
+    --ac-h: #c92e2e;
+    --ac-s: rgba(232, 59, 59, 0.08);
+    --sf:   #ffffff;
+    --sf2:  #f7f7f6;
+    --sf3:  #fafaf9;
+    --bd:   rgba(0, 0, 0, 0.08);
+    --bd2:  rgba(0, 0, 0, 0.16);
+    --bg:   #f4f3f0;
+    --tx:   #0a0a0a;
+    --tx2:  #666;
+    --tx3:  #999;
+    --ok:   #10b981;
+    --f:    -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r:    10px;
+    --r-lg: 14px;
+    --e:    0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font: 14px/1.5 var(--f);
+    color: var(--tx);
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 1200px 600px at 100% 0%, rgba(232,59,59,0.04), transparent 60%);
+    min-height: 100vh;
+  }
+
+  /* ── Top crumb ────────────────────────────────────────────────────── */
+  .crumb {
+    max-width: 1280px; margin: 0 auto; padding: 22px 32px 0;
+    display: flex; align-items: center; gap: 14px;
+    font: 600 13px var(--f);
+  }
+  .crumb__close {
+    border: 1px solid var(--bd); background: var(--sf);
+    width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; color: var(--tx);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .crumb__close svg { width: 14px; height: 14px; }
+  .crumb__link {
+    color: var(--tx3); text-decoration: none; font-weight: 500;
+    transition: color var(--e);
+  }
+  .crumb__link:hover { color: var(--tx); }
+  .crumb__sep { color: var(--tx3); font-weight: 400; }
+  .crumb__here { color: var(--tx); }
+
+  /* ── Layout ───────────────────────────────────────────────────────── */
+  .page  { max-width: 1280px; margin: 0 auto; padding: 0 32px 80px; }
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 480px;
+    gap: 28px;
+    margin-top: 22px;
+    align-items: start;
+  }
+  @media (max-width: 1040px) { .layout { grid-template-columns: 1fr; } }
+
+  h2.section-title {
+    margin: 0 0 14px;
+    font-size: 20px; font-weight: 700; letter-spacing: -.01em;
+    display: inline-flex; align-items: baseline; gap: 12px;
+  }
+  h2.section-title small {
+    font: 500 11px var(--mono); color: var(--tx3);
+    letter-spacing: .04em; text-transform: uppercase;
+  }
+
+  /* ── Summary side (LEFT) ──────────────────────────────────────────── */
+  .card {
+    background: var(--sf);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-lg);
+    padding: 22px 24px;
+    margin-bottom: 14px;
+  }
+
+  .line {
+    display: grid;
+    grid-template-columns: 76px 1fr auto;
+    column-gap: 16px;
+    padding: 14px 0;
+    border-top: 1px solid var(--bd);
+    position: relative;
+  }
+  .card > .line:first-of-type { border-top: 0; padding-top: 4px; }
+  .line__image {
+    width: 76px; height: 76px;
+    border-radius: 10px;
+    background: var(--sf2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    overflow: hidden;
+  }
+  .line__body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .line__title { font-size: 14px; font-weight: 700; letter-spacing: -.005em; line-height: 1.3; }
+  .line__cat  { font-size: 11px; color: var(--tx3); }
+  .line__selects {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 2px;
+  }
+  .select {
+    appearance: none; -webkit-appearance: none;
+    border: 1px solid var(--bd); background: var(--sf);
+    border-radius: 7px;
+    padding: 4px 22px 4px 10px;
+    font: 600 11px var(--f); color: var(--tx);
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='none' stroke='%23666' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round' d='M1 1l4 4 4-4'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    transition: border-color var(--e);
+  }
+  .select:hover { border-color: var(--bd2); }
+  .select:focus { outline: 0; border-color: var(--ac); box-shadow: 0 0 0 4px var(--ac-s); }
+
+  .line__price {
+    font: 700 15px var(--mono); font-variant-numeric: tabular-nums;
+    text-align: right; align-self: end;
+  }
+  .line__remove {
+    position: absolute; top: 14px; right: 0;
+    border: 0; background: transparent;
+    width: 24px; height: 24px; border-radius: 50%;
+    color: var(--tx3); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .line__remove:hover { color: var(--ac); background: var(--sf2); }
+  .line__remove svg { width: 12px; height: 12px; }
+
+  /* Discount code */
+  .discount {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--sf2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 10px;
+  }
+  .discount__icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--sf); border: 1px solid var(--bd);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--tx2);
+  }
+  .discount__icon svg { width: 14px; height: 14px; }
+  .discount__body { flex: 1; padding-left: 12px; }
+  .discount__title { font-size: 13px; font-weight: 700; }
+  .discount__sub { font-size: 11px; color: var(--tx3); }
+  .discount__btn {
+    border: 1px solid var(--bd); background: var(--sf);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font: 600 12px var(--f); color: var(--tx);
+    cursor: pointer;
+    transition: background var(--e), border-color var(--e);
+  }
+  .discount__btn:hover { background: var(--sf2); border-color: var(--bd2); }
+
+  /* Totals */
+  .totals { margin-top: 4px; }
+  .totals-row {
+    display: flex; justify-content: space-between;
+    padding: 5px 0;
+    font-size: 13px; color: var(--tx2);
+    font-variant-numeric: tabular-nums;
+  }
+  .totals-row > span:last-child { font-family: var(--mono); color: var(--tx); }
+  .totals-row .info-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .totals-row .info-tag svg { width: 13px; height: 13px; color: var(--tx3); }
+  .totals-row--total {
+    margin-top: 8px; padding-top: 12px;
+    border-top: 1px solid var(--bd);
+    color: var(--tx); font-size: 16px; font-weight: 700;
+  }
+  .totals-row--total > span:last-child { font-family: var(--f); font-size: 18px; }
+
+  /* Upsell */
+  .upsell {
+    background: var(--sf);
+    border: 1px dashed var(--bd2);
+    border-radius: var(--r-lg);
+    padding: 16px 20px;
+  }
+  .upsell-head {
+    font: 600 11px var(--mono); color: var(--tx3);
+    letter-spacing: .04em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .upsell-row {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    column-gap: 14px;
+    align-items: center;
+  }
+  .upsell-img {
+    width: 64px; height: 64px; border-radius: 10px;
+    background: var(--sf2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    position: relative;
+  }
+  .upsell-img::before {
+    content: ''; position: absolute; top: -3px; left: -3px;
+    width: 12px; height: 12px; border-radius: 50%; background: var(--ac);
+  }
+  .upsell-body { min-width: 0; }
+  .upsell-title { font-size: 13px; font-weight: 700; line-height: 1.25; }
+  .upsell-desc { font-size: 11px; color: var(--tx3); margin-top: 2px; max-width: 30ch; }
+  .upsell-add {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: transparent; border: 0;
+    color: var(--ac); cursor: pointer;
+    font: 600 12px var(--f);
+    padding: 6px 0; margin-top: 4px;
+  }
+  .upsell-add svg { width: 12px; height: 12px; }
+  .upsell-price {
+    text-align: right;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .upsell-strike {
+    font: 500 12px var(--mono); color: var(--tx3); text-decoration: line-through;
+  }
+  .upsell-now {
+    font: 700 14px var(--mono); color: var(--ac);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Payment side (RIGHT) ─────────────────────────────────────────── */
+  .pay-card {
+    background: var(--sf);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-lg);
+    padding: 22px 24px;
+    position: sticky; top: 18px;
+  }
+  .gateway-toggle {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4px; padding: 3px;
+    background: var(--sf2);
+    border-radius: 10px;
+    margin-bottom: 16px;
+  }
+  .gateway-toggle__btn {
+    border: 0; background: transparent;
+    padding: 9px 10px; border-radius: 8px;
+    font: 600 12px var(--f); color: var(--tx2);
+    cursor: pointer;
+    transition: background var(--e), color var(--e), box-shadow var(--e);
+  }
+  .gateway-toggle__btn.active {
+    background: var(--sf); color: var(--tx);
+    box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 0 0 1px var(--bd);
+  }
+
+  .method-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    background: var(--sf2);
+    padding: 4px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+  }
+  .method-pill {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px;
+    background: transparent; border: 0;
+    border-radius: 8px;
+    font: 600 11px var(--f); color: var(--tx2);
+    cursor: pointer;
+    transition: all var(--e);
+  }
+  .method-pill.active {
+    background: var(--sf); color: var(--tx);
+    box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 0 0 1px var(--bd);
+  }
+  .method-pill__ico {
+    width: 16px; height: 16px; border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 700 9px var(--f); color: #fff;
+  }
+  .method-pill[data-m="card"]    .method-pill__ico { background: #1a1a1a; }
+  .method-pill[data-m="apay"]    .method-pill__ico { background: #000; color: #fff; }
+  .method-pill[data-m="gpay"]    .method-pill__ico { background: #fff; color: #4285f4; border: 1px solid var(--bd); }
+  .method-pill[data-m="alipay"]  .method-pill__ico { background: #1677ff; }
+
+  .pay-link-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .secure-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 600 12px var(--f); color: var(--tx);
+    cursor: pointer;
+  }
+  .secure-link svg { width: 12px; height: 12px; }
+  .secure-link__caret { color: var(--tx3); }
+  .learn-link { font-size: 11px; color: var(--tx3); text-decoration: none; }
+  .learn-link:hover { color: var(--tx); text-decoration: underline; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .field-label { font: 500 11px var(--f); color: var(--tx2); letter-spacing: .02em; }
+  .input {
+    height: 40px; padding: 0 12px;
+    background: var(--sf); border: 1px solid var(--bd);
+    border-radius: var(--r);
+    font: 14px var(--f); color: var(--tx);
+    transition: border-color var(--e), background var(--e), box-shadow var(--e);
+  }
+  .input:focus { outline: 0; border-color: var(--ac); box-shadow: 0 0 0 4px var(--ac-s); }
+  .input::placeholder { color: var(--tx3); }
+  .input--mono { font-family: var(--mono); letter-spacing: .04em; }
+
+  .input-with-brand {
+    position: relative;
+  }
+  .input-with-brand .input { padding-right: 100px; }
+  .input-with-brand .brand-row {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .brand-chip {
+    width: 28px; height: 18px; border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 700 8px var(--f); letter-spacing: .04em;
+    background: var(--sf2);
+  }
+  .brand-chip--visa { background: #1a1f71; color: #fff; }
+  .brand-chip--mc { background: #fff; border: 1px solid var(--bd); }
+  .brand-chip--mc::before { content:''; width:9px;height:9px;border-radius:50%;background:#eb001b; }
+  .brand-chip--mc::after  { content:''; width:9px;height:9px;border-radius:50%;background:#f79e1b;margin-left:-3px;opacity:.9; }
+  .brand-chip--amex { background: #2e77bb; color: #fff; }
+
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row-2 .field { margin-bottom: 12px; }
+
+  .country-row {
+    display: flex; align-items: center; gap: 8px;
+    height: 40px; padding: 0 12px;
+    background: var(--sf); border: 1px solid var(--bd);
+    border-radius: var(--r);
+    font: 14px var(--f);
+  }
+  .country-flag { width: 18px; height: 14px; border-radius: 2px; background: linear-gradient(180deg, #b22234 33%, #fff 33% 66%, #b22234 66%); flex-shrink: 0; }
+
+  .pay-summary {
+    background: var(--sf2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 14px 0;
+  }
+  .pay-summary .totals-row { padding: 4px 0; }
+  .pay-summary .totals-row--total {
+    margin-top: 6px; padding-top: 10px;
+    border-top: 1px solid var(--bd);
+  }
+
+  .pay-btn {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    width: 100%; height: 52px;
+    background: var(--ac); color: #fff;
+    border: 0; border-radius: var(--r);
+    font: 700 14px var(--f);
+    cursor: pointer;
+    transition: background var(--e), transform var(--e), box-shadow var(--e);
+    font-variant-numeric: tabular-nums;
+  }
+  .pay-btn:hover { background: var(--ac-h); transform: translateY(-1px); box-shadow: 0 12px 28px rgba(232,59,59,.32); }
+  .pay-btn__lock svg { width: 13px; height: 13px; }
+
+  .pay-foot {
+    margin-top: 12px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    font: 500 11px var(--f); color: var(--tx3);
+  }
+  .pay-foot a { color: var(--tx2); text-decoration: none; }
+  .pay-foot a:hover { color: var(--tx); }
+  .pay-foot__sep { opacity: 0.4; }
+
+  /* ── Method strip (6-rail full) + panels ─────────────────────────── */
+  .method-strip--6 {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .method-pill[data-m="wallets"] .method-pill__ico { background: #000; }
+  .method-pill[data-m="bnpl"]    .method-pill__ico { background: #ffa8b8; color: #000; }
+  .method-pill[data-m="bank"]    .method-pill__ico { background: var(--ok); }
+  .method-pill[data-m="crypto"]  .method-pill__ico { background: #f7931a; }
+  .method-pill[data-m="p2p"]     .method-pill__ico { background: #00d632; }
+
+  .method-panel { display: none; animation: panelIn .28s var(--e); }
+  .method-panel.active { display: block; }
+  @keyframes panelIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .method-note {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--sf2);
+    border-radius: var(--r);
+    font-size: 11px; line-height: 1.5;
+    color: var(--tx3);
+    text-align: center;
+  }
+
+  /* Wallets */
+  .wallet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .wallet-btn {
+    height: 48px; border-radius: var(--r);
+    font: 700 13px var(--f);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform var(--e), box-shadow var(--e);
+  }
+  .wallet-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.1); }
+  .wallet-apple  { background: #000; color: #fff; }
+  .wallet-google { background: #fff; color: #1a1a1a; border-color: var(--bd2); }
+  .wallet-paypal { background: #fff; color: #003087; border-color: var(--bd2); font-style: italic; font-weight: 800; grid-column: span 2; }
+  .wallet-shop   { background: #5a31f4; color: #fff; grid-column: span 2; }
+
+  /* BNPL */
+  .bnpl-list { display: flex; flex-direction: column; gap: 8px; }
+  .bnpl-card {
+    display: grid; grid-template-columns: 56px 1fr auto; column-gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--sf2); border: 1.5px solid transparent;
+    border-radius: var(--r);
+    cursor: pointer; transition: all var(--e);
+  }
+  .bnpl-card:hover { background: var(--sf3); border-color: var(--bd2); }
+  .bnpl-card.active { border-color: var(--ac); background: var(--ac-s); }
+  .bnpl-logo {
+    width: 56px; height: 28px; border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 700 11px var(--f); letter-spacing: -.02em;
+  }
+  .bnpl-klarna       { background: #ffa8b8; color: #000; }
+  .bnpl-affirm       { background: #060809; color: #fff; }
+  .bnpl-afterpay     { background: #b2fce4; color: #000; }
+  .bnpl-sezzle       { background: #fffd6d; color: #000; }
+  .bnpl-zip          { background: #aa8fff; color: #fff; }
+  .bnpl-paypalcredit { background: #003087; color: #fff; font-size: 9px; letter-spacing: 0; }
+  .bnpl-name { font: 700 13px var(--f); }
+  .bnpl-sub  { font-size: 11px; color: var(--tx3); margin-top: 1px; }
+  .bnpl-chev { color: var(--tx3); font-size: 16px; }
+
+  /* Bank */
+  .bank-card {
+    display: grid; grid-template-columns: 48px 1fr auto; column-gap: 14px;
+    align-items: center;
+    padding: 14px;
+    background: var(--sf2); border: 1.5px solid transparent;
+    border-radius: var(--r);
+    cursor: pointer; transition: all var(--e);
+  }
+  .bank-card.active { border-color: var(--ac); background: var(--ac-s); }
+  .bank-ico {
+    width: 40px; height: 40px; border-radius: 8px;
+    background: var(--ok); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 700 16px var(--f);
+  }
+  .bank-name { font: 700 13px var(--f); }
+  .bank-sub  { font-size: 11px; color: var(--tx3); margin-top: 2px; max-width: 28ch; line-height: 1.45; }
+
+  /* Crypto */
+  .crypto-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+  }
+  .crypto-chip {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 12px 6px;
+    background: var(--sf2); border: 1.5px solid transparent;
+    border-radius: var(--r);
+    cursor: pointer; transition: all var(--e);
+  }
+  .crypto-chip:hover { background: var(--sf3); border-color: var(--bd2); }
+  .crypto-chip.active { border-color: var(--ac); background: var(--ac-s); }
+  .crypto-sym {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font: 700 11px var(--f); color: #fff;
+  }
+  .crypto-btc  { background: #f7931a; }
+  .crypto-eth  { background: #627eea; }
+  .crypto-usdc { background: #2775ca; }
+  .crypto-usdt { background: #26a17b; }
+  .crypto-sol  { background: linear-gradient(135deg, #9945ff, #14f195); }
+  .crypto-xrp  { background: #23292f; }
+  .crypto-label { font: 600 11px var(--f); color: var(--tx2); }
+
+  /* P2P */
+  .p2p-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .p2p-card {
+    height: 52px; border-radius: var(--r);
+    border: 0; cursor: pointer;
+    font: 700 13px var(--f);
+    transition: transform var(--e), box-shadow var(--e);
+  }
+  .p2p-card:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.1); }
+  .p2p-cashapp { background: #00d632; color: #000; }
+  .p2p-venmo   { background: #3d95ce; color: #fff; }
+  .p2p-zelle   { background: #6d1ed4; color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="crumb">
+  <button class="crumb__close" aria-label="Close">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+  </button>
+  <a class="crumb__link" href="#">Shopping Cart</a>
+  <span class="crumb__sep">›</span>
+  <span class="crumb__here">Checkout</span>
+</div>
+
+<main class="page">
+  <div class="layout">
+
+    <!-- ─── LEFT — Editable Order Summary ─────────────────────────── -->
+    <section>
+      <h2 class="section-title">Order Summary <small>3 items</small></h2>
+
+      <div class="card">
+
+        <div class="line">
+          <div class="line__image" style="background:#1a1a1a;color:#fff">🟥</div>
+          <div class="line__body">
+            <div class="line__title">Therum Studio Tee</div>
+            <div class="line__cat">Apparel · Tops</div>
+            <div class="line__selects">
+              <select class="select"><option>Cotton</option><option>Tri-blend</option></select>
+              <select class="select"><option>Red</option><option>Black</option><option>Heather</option></select>
+              <select class="select"><option>Large</option><option>Medium</option><option>Small</option></select>
+              <select class="select"><option>Qty 1</option><option>Qty 2</option><option>Qty 3</option></select>
+            </div>
+          </div>
+          <div class="line__price">$29.00</div>
+          <button class="line__remove" aria-label="Remove">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+          </button>
+        </div>
+
+        <div class="line">
+          <div class="line__image" style="background:#2a2a2a;color:#fff">🧥</div>
+          <div class="line__body">
+            <div class="line__title">Heavyweight Hoodie</div>
+            <div class="line__cat">Apparel · Outerwear</div>
+            <div class="line__selects">
+              <select class="select"><option>Fleece</option></select>
+              <select class="select"><option>Black</option><option>Charcoal</option><option>Bone</option></select>
+              <select class="select"><option>Medium</option><option>Large</option><option>XL</option></select>
+              <select class="select"><option>Qty 2</option><option>Qty 1</option><option>Qty 3</option></select>
+            </div>
+          </div>
+          <div class="line__price">$137.60</div>
+          <button class="line__remove">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+          </button>
+        </div>
+
+        <div class="line">
+          <div class="line__image" style="background:#627eea;color:#fff">🧢</div>
+          <div class="line__body">
+            <div class="line__title">Patch Cap</div>
+            <div class="line__cat">Accessories</div>
+            <div class="line__selects">
+              <select class="select"><option>Twill</option></select>
+              <select class="select"><option>Ocean</option><option>Sand</option><option>Black</option></select>
+              <select class="select"><option>One size</option></select>
+              <select class="select"><option>Qty 1</option><option>Qty 2</option></select>
+            </div>
+          </div>
+          <div class="line__price">$24.00</div>
+          <button class="line__remove">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+          </button>
+        </div>
+
+        <div class="discount">
+          <div class="discount__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          </div>
+          <div class="discount__body">
+            <div class="discount__title">Discount code</div>
+            <div class="discount__sub">Save 20% with code STUDIO20</div>
+          </div>
+          <button class="discount__btn">Add code</button>
+        </div>
+
+        <div class="totals">
+          <div class="totals-row"><span>Subtotal</span><span>$190.60</span></div>
+          <div class="totals-row"><span>Shipping</span><span>Free</span></div>
+          <div class="totals-row">
+            <span class="info-tag">Tax
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            </span>
+            <span>$16.68</span>
+          </div>
+          <div class="totals-row totals-row--total"><span>Total</span><span>$207.28</span></div>
+        </div>
+      </div>
+
+      <!-- Upsell -->
+      <div class="upsell">
+        <div class="upsell-head">Recommended for you</div>
+        <div class="upsell-row">
+          <div class="upsell-img" style="background:#fafafa">📦</div>
+          <div class="upsell-body">
+            <div class="upsell-title">Therum Studio Bundle</div>
+            <div class="upsell-desc">Tee + Cap + Sticker pack — saves 15% vs. buying individually.</div>
+            <button class="upsell-add">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add to your order
+            </button>
+          </div>
+          <div class="upsell-price">
+            <div class="upsell-strike">$61.00</div>
+            <div class="upsell-now">$51.85</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── RIGHT — Payment ────────────────────────────────────────── -->
+    <aside class="pay-card">
+
+      <!-- Full 6-rail method strip — matches checkout-experience.html demo -->
+      <div class="method-strip method-strip--6">
+        <button class="method-pill active" data-m="card"><span class="method-pill__ico">CC</span> Card</button>
+        <button class="method-pill" data-m="wallets"><span class="method-pill__ico">⌘</span> Wallets</button>
+        <button class="method-pill" data-m="bnpl"><span class="method-pill__ico">4×</span> Pay later</button>
+        <button class="method-pill" data-m="bank"><span class="method-pill__ico">⏧</span> Bank</button>
+        <button class="method-pill" data-m="crypto"><span class="method-pill__ico">₿</span> Crypto</button>
+        <button class="method-pill" data-m="p2p"><span class="method-pill__ico">$</span> P2P</button>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Email address</label>
+        <input class="input" type="email" placeholder="you@example.com" value="jenny@example.com" />
+      </div>
+
+      <!-- ─── Card panel ────────────────────────────────────────── -->
+      <div class="method-panel active" data-panel="card">
+        <div class="field">
+          <label class="field-label">Card number</label>
+          <div class="input-with-brand">
+            <input class="input input--mono" placeholder="1234 1234 1234 1234" value="1234 1234 1234 1234" />
+            <div class="brand-row">
+              <span class="brand-chip brand-chip--visa">VISA</span>
+              <span class="brand-chip brand-chip--mc" aria-label="Mastercard"></span>
+              <span class="brand-chip brand-chip--amex">AMEX</span>
+            </div>
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label class="field-label">Expiration date</label>
+            <input class="input input--mono" placeholder="MM / YY" value="10 / 2028" />
+          </div>
+          <div class="field">
+            <label class="field-label">Security code</label>
+            <input class="input input--mono" placeholder="•••" value="135" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Cardholder name</label>
+          <input class="input" placeholder="As shown on card" value="Jenny Rosen" />
+        </div>
+        <div class="field">
+          <label class="field-label">Country</label>
+          <div class="country-row">
+            <span class="country-flag"></span>
+            United States
+            <span style="margin-left:auto;color:var(--tx3)">▾</span>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Address</label>
+          <input class="input" placeholder="Street" value="27 Fredrick Ave" />
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label class="field-label">City</label>
+            <input class="input" value="Los Angeles" />
+          </div>
+          <div class="field">
+            <label class="field-label">ZIP</label>
+            <input class="input" value="94025" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Tax ID number <span style="opacity:.55">(optional)</span></label>
+          <input class="input input--mono" placeholder="VAT or EIN" value="15978046" />
+        </div>
+      </div>
+
+      <!-- ─── Wallets panel ──────────────────────────────────────── -->
+      <div class="method-panel" data-panel="wallets">
+        <div class="wallet-grid">
+          <button class="wallet-btn wallet-apple">&#xf8ff;&nbsp;Pay</button>
+          <button class="wallet-btn wallet-google">G&nbsp;Pay</button>
+          <button class="wallet-btn wallet-paypal">PayPal</button>
+          <button class="wallet-btn wallet-shop">Shop&nbsp;Pay</button>
+        </div>
+        <div class="method-note">Customer authenticates inside the wallet — no card data ever touches Therum.</div>
+      </div>
+
+      <!-- ─── BNPL panel ─────────────────────────────────────────── -->
+      <div class="method-panel" data-panel="bnpl">
+        <div class="bnpl-list">
+          <label class="bnpl-card active">
+            <span class="bnpl-logo bnpl-klarna">Klarna</span>
+            <div class="bnpl-body">
+              <div class="bnpl-name">4 payments of <span data-quartertotal>$51.82</span></div>
+              <div class="bnpl-sub">0% interest · every 2 weeks</div>
+            </div>
+            <span class="bnpl-chev">›</span>
+          </label>
+          <label class="bnpl-card">
+            <span class="bnpl-logo bnpl-affirm">affirm</span>
+            <div class="bnpl-body">
+              <div class="bnpl-name">3, 6, or 12 monthly payments</div>
+              <div class="bnpl-sub">0–36% APR depending on credit</div>
+            </div>
+            <span class="bnpl-chev">›</span>
+          </label>
+          <label class="bnpl-card">
+            <span class="bnpl-logo bnpl-afterpay">Afterpay</span>
+            <div class="bnpl-body">
+              <div class="bnpl-name">4 payments of <span data-quartertotal>$51.82</span></div>
+              <div class="bnpl-sub">0% interest · every 2 weeks</div>
+            </div>
+            <span class="bnpl-chev">›</span>
+          </label>
+          <label class="bnpl-card">
+            <span class="bnpl-logo bnpl-sezzle">Sezzle</span>
+            <div class="bnpl-body">
+              <div class="bnpl-name">4 payments of <span data-quartertotal>$51.82</span></div>
+              <div class="bnpl-sub">Soft credit check</div>
+            </div>
+            <span class="bnpl-chev">›</span>
+          </label>
+          <label class="bnpl-card">
+            <span class="bnpl-logo bnpl-zip">Zip</span>
+            <div class="bnpl-body">
+              <div class="bnpl-name">4 payments of <span data-quartertotal>$51.82</span></div>
+              <div class="bnpl-sub">Bi-weekly · $1 per installment</div>
+            </div>
+            <span class="bnpl-chev">›</span>
+          </label>
+          <label class="bnpl-card">
+            <span class="bnpl-logo bnpl-paypalcredit">PP Credit</span>
+            <div class="bnpl-body">
+              <div class="bnpl-name">PayPal Credit</div>
+              <div class="bnpl-sub">6 months no interest on $99+</div>
+            </div>
+            <span class="bnpl-chev">›</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- ─── Bank panel ─────────────────────────────────────────── -->
+      <div class="method-panel" data-panel="bank">
+        <label class="bank-card active">
+          <span class="bank-ico">⏧</span>
+          <div class="bank-body">
+            <div class="bank-name">Connect with Plaid</div>
+            <div class="bank-sub">Pay directly from your bank. Saves ~2% in card fees — passed back to you.</div>
+          </div>
+          <span class="bnpl-chev">›</span>
+        </label>
+      </div>
+
+      <!-- ─── Crypto panel ───────────────────────────────────────── -->
+      <div class="method-panel" data-panel="crypto">
+        <div class="crypto-grid">
+          <label class="crypto-chip active"><span class="crypto-sym crypto-btc">₿</span><span class="crypto-label">BTC</span></label>
+          <label class="crypto-chip"><span class="crypto-sym crypto-eth">Ξ</span><span class="crypto-label">ETH</span></label>
+          <label class="crypto-chip"><span class="crypto-sym crypto-usdc">$</span><span class="crypto-label">USDC</span></label>
+          <label class="crypto-chip"><span class="crypto-sym crypto-usdt">₮</span><span class="crypto-label">USDT</span></label>
+          <label class="crypto-chip"><span class="crypto-sym crypto-sol">◎</span><span class="crypto-label">SOL</span></label>
+          <label class="crypto-chip"><span class="crypto-sym crypto-xrp">✕</span><span class="crypto-label">XRP</span></label>
+        </div>
+        <div class="method-note">QR code on confirm · ~10–15 min for network settlement · routed through AnyPay (50+ coins)</div>
+      </div>
+
+      <!-- ─── P2P panel ──────────────────────────────────────────── -->
+      <div class="method-panel" data-panel="p2p">
+        <div class="p2p-grid">
+          <button class="p2p-card p2p-cashapp">$&nbsp;Cash App</button>
+          <button class="p2p-card p2p-venmo">Venmo</button>
+          <button class="p2p-card p2p-zelle">Zelle</button>
+        </div>
+        <div class="method-note">Opens the app's QR · Zelle settles bank-to-bank in seconds</div>
+      </div>
+
+      <div class="pay-summary">
+        <div class="totals-row"><span>Subtotal</span><span>$190.60</span></div>
+        <div class="totals-row totals-row--total"><span>Total</span><span>$207.28</span></div>
+      </div>
+
+      <button class="pay-btn" id="payBtn">
+        Pay $207.28
+        <span class="pay-btn__lock">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
+      </button>
+
+      <div class="pay-foot">
+        Powered by Therum<span class="pay-foot__sep">·</span><a href="#">Terms</a><span class="pay-foot__sep">·</span><a href="#">Privacy</a>
+      </div>
+    </aside>
+
+  </div>
+</main>
+
+<script>
+  ( function () {
+    var TOTAL = '$207.28';
+    var labels = {
+      card:    'Pay '            + TOTAL,
+      wallets: 'Continue with wallet',
+      bnpl:    'Continue to Klarna',
+      bank:    'Connect bank account',
+      crypto:  'Generate QR · '  + TOTAL,
+      p2p:     'Open Cash App',
+    };
+
+    var pills  = document.querySelectorAll( '.method-pill' );
+    var panels = document.querySelectorAll( '.method-panel' );
+    var pay    = document.getElementById( 'payBtn' );
+
+    pills.forEach( function ( p ) {
+      p.addEventListener( 'click', function () {
+        var m = p.getAttribute( 'data-m' );
+        pills.forEach( function ( x ) { x.classList.remove( 'active' ); } );
+        panels.forEach( function ( x ) { x.classList.remove( 'active' ); } );
+        p.classList.add( 'active' );
+        var panel = document.querySelector( '[data-panel="' + m + '"]' );
+        if ( panel ) panel.classList.add( 'active' );
+        // Replace pay button text (preserve the lock SVG span)
+        var lock = pay.querySelector( '.pay-btn__lock' );
+        pay.textContent = labels[ m ] || labels.card;
+        if ( lock ) pay.appendChild( lock );
+      } );
+    } );
+
+    // Nested-pick activations inside BNPL / crypto / bank / P2P
+    [ '.bnpl-card', '.crypto-chip', '.bank-card', '.p2p-card' ].forEach( function ( sel ) {
+      document.querySelectorAll( sel ).forEach( function ( el ) {
+        el.addEventListener( 'click', function () {
+          document.querySelectorAll( sel ).forEach( function ( x ) { x.classList.remove( 'active' ); } );
+          el.classList.add( 'active' );
+        } );
+      } );
+    } );
+  } )();
+</script>
+
+</body>
+</html>

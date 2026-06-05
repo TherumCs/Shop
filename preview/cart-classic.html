@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shop by Therum — Classic cart preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --ac:   #e83b3b;  --ac-h: #c92e2e;  --ac-s: rgba(232,59,59,0.08);
+    --sf:   #fff;     --sf2:  #f7f7f6;  --sf3:  #fafaf9;
+    --bd:   rgba(0,0,0,0.08); --bd2: rgba(0,0,0,0.16);
+    --bg:   #f4f3f0;  --tx:   #0a0a0a;  --tx2:  #666;     --tx3:  #999;
+    --ok:   #10b981;
+    --f:    -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r: 10px; --r-lg: 14px;
+    --e: 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font: 14px/1.5 var(--f); color: var(--tx); background: var(--bg);
+    background-image: radial-gradient(ellipse 1200px 600px at 100% 0%, rgba(232,59,59,0.04), transparent 60%);
+    min-height: 100vh;
+  }
+
+  .page { max-width: 1200px; margin: 0 auto; padding: 32px 32px 80px; }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 15px; letter-spacing: -.01em;
+    margin-bottom: 32px;
+  }
+  .brand-mark { width: 28px; height: 28px; border-radius: 7px; background: var(--ac); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+  .brand small { color: var(--tx3); font-weight: 500; margin-left: 6px; }
+
+  /* Page head */
+  .page-head { margin-bottom: 12px; }
+  .page-head__crumb {
+    display: inline-flex; align-items: center; gap: 10px;
+    font: 600 12px var(--f); color: var(--tx3);
+    margin-bottom: 12px;
+  }
+  .page-head__crumb b { color: var(--tx); }
+  .page-head__crumb svg { width: 12px; height: 12px; }
+  .page-head h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.015em; }
+
+  /* Layout — form-left, sticky summary right (classic silhouette) */
+  .layout { display: grid; grid-template-columns: 1fr 360px; gap: 32px; align-items: flex-start; }
+  @media (max-width: 920px) {
+    .layout { grid-template-columns: 1fr; }
+    .summary { order: -1; position: relative !important; top: 0 !important; }
+  }
+
+  /* Sections — numbered, focus-glow */
+  .section {
+    background: var(--sf); border: 1px solid var(--bd); border-radius: var(--r-lg);
+    padding: 24px 28px; margin-bottom: 14px;
+    transition: border-color var(--e), box-shadow var(--e);
+  }
+  .section.is-focus { border-color: rgba(232,59,59,.4); box-shadow: 0 8px 28px rgba(232,59,59,.07); }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .section-head h2 {
+    margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.005em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--sf2); color: var(--tx3);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    transition: background var(--e), color var(--e);
+  }
+  .section.is-focus .section-num { background: var(--ac); color: #fff; }
+  .section-status {
+    font: 500 11px var(--mono); color: var(--tx3);
+    letter-spacing: .04em; text-transform: uppercase;
+  }
+  .section.is-focus .section-status { color: var(--tx2); }
+
+  /* Cart line */
+  .line {
+    display: grid;
+    grid-template-columns: 72px 1fr 110px 100px 32px;
+    column-gap: 18px;
+    align-items: center;
+    padding: 16px 0;
+    border-top: 1px solid var(--bd);
+  }
+  .section > .line:first-of-type { border-top: 0; padding-top: 4px; }
+  .line__image {
+    width: 72px; height: 72px; border-radius: 10px;
+    background: var(--sf2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+  }
+  .line__info { min-width: 0; }
+  .line__title { font-size: 14px; font-weight: 700; letter-spacing: -.005em; }
+  .line__sku   { font: 500 11px var(--mono); color: var(--tx3); letter-spacing: .02em; }
+  .line__attrs { font-size: 11px; color: var(--tx2); margin-top: 2px; }
+  .line__price { font: 700 13px var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+
+  .qty { display: inline-flex; align-items: center; background: var(--sf2); border-radius: 999px; padding: 4px; border: 1px solid transparent; }
+  .qty:focus-within { background: var(--sf); border-color: var(--ac); box-shadow: 0 0 0 4px var(--ac-s); }
+  .qty__btn {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 0; background: transparent;
+    color: var(--tx2); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .qty__btn:hover { color: var(--tx); background: var(--sf); }
+  .qty__btn svg  { width: 12px; height: 12px; }
+  .qty__val { min-width: 24px; text-align: center; font: 700 13px var(--mono); font-variant-numeric: tabular-nums; }
+
+  .line__remove {
+    border: 0; background: transparent;
+    width: 28px; height: 28px; border-radius: 50%;
+    color: var(--tx3); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    justify-self: end;
+  }
+  .line__remove:hover { background: var(--sf2); color: var(--ac); }
+  .line__remove svg { width: 14px; height: 14px; }
+
+  /* Below cart — promo + continue */
+  .below-cart { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--bd); display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+  .promo {
+    display: flex; gap: 6px; align-items: center;
+    background: var(--sf2);
+    border-radius: var(--r);
+    padding: 4px 4px 4px 12px;
+    width: 280px;
+  }
+  .promo input {
+    flex: 1; border: 0; outline: 0; background: transparent;
+    font: 600 12px var(--mono); letter-spacing: .04em;
+  }
+  .promo button {
+    border: 0; background: var(--tx); color: #fff;
+    border-radius: 7px; padding: 6px 12px;
+    font: 700 11px var(--f); cursor: pointer;
+    transition: background var(--e);
+  }
+  .promo button:hover { background: var(--ac); }
+  .continue {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 0; background: transparent;
+    font: 600 12px var(--f); color: var(--tx2);
+    cursor: pointer;
+    transition: color var(--e);
+  }
+  .continue:hover { color: var(--ac); }
+  .continue svg { width: 12px; height: 12px; }
+
+  /* Summary right rail */
+  .summary {
+    background: var(--sf); border: 1px solid var(--bd); border-radius: var(--r-lg);
+    padding: 24px 26px;
+    position: sticky; top: 24px;
+  }
+  .summary h3 {
+    margin: 0 0 16px; font: 700 13px var(--f);
+    text-transform: uppercase; letter-spacing: .06em;
+    color: var(--tx3);
+  }
+  .li-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+  .li { display: flex; gap: 12px; align-items: center; }
+  .li__img {
+    width: 48px; height: 48px; border-radius: 8px; background: var(--sf2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0; position: relative;
+  }
+  .li__qty {
+    position: absolute; top: -5px; right: -5px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--tx); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font: 700 10px var(--mono);
+  }
+  .li__name { flex: 1; font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .li__meta { font-size: 11px; color: var(--tx3); margin-top: 1px; }
+  .li__price { font: 700 13px var(--mono); font-variant-numeric: tabular-nums; }
+
+  .totals { border-top: 1px solid var(--bd); padding-top: 14px; margin-top: 4px; }
+  .totals-row {
+    display: flex; justify-content: space-between;
+    font-size: 13px; color: var(--tx2); margin-bottom: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .totals-row > span:last-child { color: var(--tx); font-family: var(--mono); }
+  .totals-row.is-total {
+    color: var(--tx); font-weight: 700; font-size: 16px;
+    margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--bd);
+  }
+  .totals-row.is-total > span:last-child { font-family: var(--f); font-size: 18px; }
+
+  .continue-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; height: 52px;
+    background: var(--ac); color: #fff;
+    border: 0; border-radius: var(--r);
+    font: 700 15px var(--f); letter-spacing: .005em;
+    cursor: pointer;
+    margin-top: 18px;
+    transition: background var(--e), transform var(--e), box-shadow var(--e);
+    font-variant-numeric: tabular-nums;
+  }
+  .continue-btn:hover { background: var(--ac-h); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(232,59,59,.22); }
+  .continue-btn svg { width: 14px; height: 14px; }
+
+  .security-note {
+    text-align: center; font-size: 11px; color: var(--tx3);
+    margin-top: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .security-note svg { width: 12px; height: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="brand">
+    <div class="brand-mark">T</div>
+    Therum Commerce <small>· Classic cart</small>
+  </div>
+
+  <header class="page-head">
+    <div class="page-head__crumb">
+      <b>Cart</b>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      Information
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      Shipping
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      Payment
+    </div>
+    <h1>Your cart</h1>
+  </header>
+
+  <div class="layout">
+
+    <div>
+      <section class="section is-focus">
+        <div class="section-head">
+          <h2><span class="section-num">1</span> Review your items</h2>
+          <span class="section-status">3 items</span>
+        </div>
+
+        <div class="line">
+          <div class="line__image" style="background:#1a1a1a;color:#fff">🟥</div>
+          <div class="line__info">
+            <div class="line__title">Therum Studio Tee</div>
+            <div class="line__sku">SKU · TS-2024-RED-LG</div>
+            <div class="line__attrs">Therum · Red · Large</div>
+          </div>
+          <div class="line__price">$29.00</div>
+          <div class="qty">
+            <button class="qty__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <div class="qty__val">1</div>
+            <button class="qty__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          </div>
+          <button class="line__remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button>
+        </div>
+
+        <div class="line">
+          <div class="line__image" style="background:#2a2a2a;color:#fff">🧥</div>
+          <div class="line__info">
+            <div class="line__title">Heavyweight Hoodie</div>
+            <div class="line__sku">SKU · PF-HH-BLK-M</div>
+            <div class="line__attrs">Printful · Black · Medium</div>
+          </div>
+          <div class="line__price">$68.80</div>
+          <div class="qty">
+            <button class="qty__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <div class="qty__val">2</div>
+            <button class="qty__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          </div>
+          <button class="line__remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button>
+        </div>
+
+        <div class="line">
+          <div class="line__image" style="background:#627eea;color:#fff">🧢</div>
+          <div class="line__info">
+            <div class="line__title">Patch Cap</div>
+            <div class="line__sku">SKU · PP-CAP-OCN-OS</div>
+            <div class="line__attrs">Prod Partner · Ocean · One size</div>
+          </div>
+          <div class="line__price">$24.00</div>
+          <div class="qty">
+            <button class="qty__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <div class="qty__val">1</div>
+            <button class="qty__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          </div>
+          <button class="line__remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button>
+        </div>
+
+        <div class="below-cart">
+          <div class="promo">
+            <input value="STUDIO20" />
+            <button>Apply</button>
+          </div>
+          <button class="continue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Continue shopping
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <aside class="summary">
+      <h3>Order summary</h3>
+
+      <div class="li-list">
+        <div class="li">
+          <div class="li__img" style="background:#1a1a1a;color:#fff">🟥<span class="li__qty">1</span></div>
+          <div style="flex:1"><div class="li__name">Therum Studio Tee</div><div class="li__meta">Red · Large</div></div>
+          <div class="li__price">$29.00</div>
+        </div>
+        <div class="li">
+          <div class="li__img" style="background:#2a2a2a;color:#fff">🧥<span class="li__qty">2</span></div>
+          <div style="flex:1"><div class="li__name">Heavyweight Hoodie</div><div class="li__meta">Black · Medium</div></div>
+          <div class="li__price">$137.60</div>
+        </div>
+        <div class="li">
+          <div class="li__img" style="background:#627eea;color:#fff">🧢<span class="li__qty">1</span></div>
+          <div style="flex:1"><div class="li__name">Patch Cap</div><div class="li__meta">Ocean · One size</div></div>
+          <div class="li__price">$24.00</div>
+        </div>
+      </div>
+
+      <div class="totals">
+        <div class="totals-row"><span>Subtotal</span><span>$190.60</span></div>
+        <div class="totals-row"><span>Discount (STUDIO20)</span><span style="color:var(--ok)">−$38.12</span></div>
+        <div class="totals-row"><span>Shipping</span><span>—</span></div>
+        <div class="totals-row"><span>Tax</span><span>—</span></div>
+        <div class="totals-row is-total"><span>Estimated</span><span>$152.48</span></div>
+      </div>
+
+      <button class="continue-btn">
+        Continue to checkout
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <div class="security-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Secure checkout · Encrypted end-to-end
+      </div>
+    </aside>
+
+  </div>
+
+</div>
+</body>
+</html>

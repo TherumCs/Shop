@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shop by Therum — Counter cart preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --ac:   #e83b3b;
+    --ac-h: #c92e2e;
+    --ac-s: rgba(232, 59, 59, 0.08);
+    --sf:   #ffffff;
+    --sf2:  #f7f7f6;
+    --sf3:  #fafaf9;
+    --bd:   rgba(0, 0, 0, 0.08);
+    --bd2:  rgba(0, 0, 0, 0.16);
+    --bg:   #f4f3f0;
+    --tx:   #0a0a0a;
+    --tx2:  #666;
+    --tx3:  #999;
+    --ok:   #10b981;
+    --footer-bg: #1d212b;        /* dark navy panel — pairs with Therum red */
+    --footer-tx: #f3f3f0;
+    --f:    -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r:    10px;
+    --r-lg: 14px;
+    --e:    0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font: 14px/1.5 var(--f);
+    color: var(--tx);
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 1200px 600px at 100% 0%, rgba(232,59,59,0.04), transparent 60%);
+    min-height: 100vh;
+  }
+
+  /* ── Top nav ───────────────────────────────────────────────────────── */
+  .nav {
+    display: flex; align-items: center; gap: 14px;
+    max-width: 1200px; margin: 0 auto; padding: 24px 32px;
+  }
+  .brand-mark { width: 28px; height: 28px; border-radius: 7px; background: var(--ac); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; letter-spacing: -.02em; }
+  .nav__brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
+  .nav__brand small { color: var(--tx3); font-weight: 500; margin-left: 6px; }
+  .nav__spacer { flex: 1; }
+  .nav__icon-btn {
+    position: relative;
+    border: 1px solid var(--bd); background: var(--sf);
+    width: 38px; height: 38px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--tx); cursor: pointer;
+    transition: background var(--e), border-color var(--e);
+  }
+  .nav__icon-btn:hover { background: var(--sf2); border-color: var(--bd2); }
+  .nav__icon-btn svg { width: 16px; height: 16px; }
+  .nav__badge {
+    position: absolute; top: -4px; right: -4px;
+    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 50%;
+    background: var(--ac); color: #fff;
+    font: 700 10px var(--mono); font-variant-numeric: tabular-nums;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Page ──────────────────────────────────────────────────────────── */
+  .page  { max-width: 1200px; margin: 0 auto; padding: 0 32px 60px; }
+
+  .page-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 26px;
+  }
+  .page-head h1 {
+    margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -.015em;
+  }
+  .page-head__meta {
+    font: 500 12px var(--mono); color: var(--tx3);
+    letter-spacing: .04em; text-transform: uppercase;
+  }
+
+  /* ── Cart card ─────────────────────────────────────────────────────── */
+  .cart {
+    background: var(--sf);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .cart__head {
+    display: grid;
+    grid-template-columns: 70px 1fr 110px 140px 110px 40px;
+    column-gap: 20px;
+    align-items: center;
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--bd);
+    font: 600 11px var(--mono);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--tx3);
+  }
+  .cart__head .col-product { grid-column: 2; }
+  .cart__head .col-price   { text-align: right; }
+  .cart__head .col-qty     { text-align: center; }
+  .cart__head .col-total   { text-align: right; }
+
+  .cart__row {
+    display: grid;
+    grid-template-columns: 70px 1fr 110px 140px 110px 40px;
+    column-gap: 20px;
+    align-items: center;
+    padding: 22px 28px;
+    border-bottom: 1px solid var(--bd);
+  }
+  .cart__row:last-child { border-bottom: 0; }
+  .cart__image {
+    width: 70px; height: 70px;
+    border-radius: var(--r);
+    background: var(--sf2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cart__image::after {
+    /* diagonal accent corner, nod to the reference */
+    content: ''; position: absolute; top: -1px; right: -1px;
+    width: 22px; height: 22px;
+    background: var(--ac-s);
+    clip-path: polygon(100% 0, 0 0, 100% 100%);
+  }
+  .cart__info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .cart__title  { font-size: 14px; font-weight: 700; line-height: 1.25; letter-spacing: -.005em; }
+  .cart__sku    { font: 500 11px var(--mono); color: var(--tx3); letter-spacing: .02em; }
+  .cart__attrs  { font-size: 11px; color: var(--tx2); }
+  .cart__price  { font: 700 13px var(--mono); font-variant-numeric: tabular-nums; text-align: right; color: var(--tx); }
+  .cart__total  { font: 700 13px var(--mono); font-variant-numeric: tabular-nums; text-align: right; color: var(--tx); }
+  .cart__remove {
+    border: 0; background: transparent; cursor: pointer;
+    width: 32px; height: 32px; border-radius: 50%;
+    color: var(--tx3);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background var(--e), color var(--e);
+    justify-self: end;
+  }
+  .cart__remove:hover { background: var(--sf2); color: var(--ac); }
+  .cart__remove svg { width: 14px; height: 14px; }
+
+  /* Qty stepper — center column */
+  .qty {
+    display: inline-flex; align-items: center;
+    background: var(--sf2);
+    border-radius: 999px; padding: 4px;
+    margin: 0 auto;
+    border: 1px solid transparent;
+    transition: background var(--e), border-color var(--e);
+  }
+  .qty:focus-within { background: var(--sf); border-color: var(--ac); box-shadow: 0 0 0 4px var(--ac-s); }
+  .qty__btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 0; background: transparent;
+    color: var(--tx2); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: color var(--e), background var(--e);
+  }
+  .qty__btn:hover { color: var(--tx); background: var(--sf); }
+  .qty__btn svg  { width: 12px; height: 12px; }
+  .qty__val {
+    min-width: 28px; text-align: center;
+    font: 700 13px var(--mono); font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Footer panel ──────────────────────────────────────────────────── */
+  .panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 14px;
+    background: var(--footer-bg);
+    color: var(--footer-tx);
+    border-radius: var(--r-lg);
+    padding: 28px 32px;
+  }
+  .panel__left  { display: flex; flex-direction: column; gap: 16px; }
+  .panel__right { display: flex; flex-direction: column; gap: 16px; }
+
+  .panel-toggle {
+    appearance: none; -webkit-appearance: none;
+    border: 0; background: transparent;
+    color: var(--footer-tx);
+    text-align: left; cursor: pointer; padding: 0;
+    display: inline-flex; align-items: center; gap: 10px;
+    font: 700 11px var(--mono);
+    letter-spacing: .12em; text-transform: uppercase;
+    opacity: 0.85; transition: opacity var(--e);
+  }
+  .panel-toggle:hover { opacity: 1; }
+  .panel-toggle__icon {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(255,255,255,.08);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .panel-toggle__icon svg { width: 10px; height: 10px; }
+
+  .panel-divider { height: 1px; background: rgba(255,255,255,.08); margin: 4px 0; }
+
+  .subtotal-row {
+    display: flex; align-items: baseline; justify-content: flex-start; gap: 14px;
+  }
+  .subtotal-row__label {
+    font: 700 11px var(--mono);
+    letter-spacing: .12em; text-transform: uppercase;
+    opacity: 0.65;
+  }
+  .subtotal-row__value {
+    font: 700 22px var(--mono); font-variant-numeric: tabular-nums;
+    letter-spacing: -.01em;
+  }
+
+  .terms {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 12px;
+    color: rgba(243,243,240,.75);
+    cursor: pointer;
+  }
+  .terms input {
+    appearance: none; -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border: 1.5px solid rgba(255,255,255,.35);
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    transition: background var(--e), border-color var(--e);
+  }
+  .terms input:checked { background: var(--ac); border-color: var(--ac); }
+  .terms input:checked::after {
+    content: ''; position: absolute; left: 4px; top: 1px;
+    width: 5px; height: 9px;
+    border: solid #fff; border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .terms a { color: var(--ac); text-decoration: none; font-weight: 600; }
+  .terms a:hover { text-decoration: underline; }
+
+  .pay-row { display: flex; gap: 10px; }
+  .checkout-btn {
+    flex: 1;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    height: 52px;
+    background: var(--ac); color: #fff;
+    border: 0; border-radius: var(--r);
+    font: 700 13px var(--f);
+    letter-spacing: .12em; text-transform: uppercase;
+    cursor: pointer;
+    transition: background var(--e), transform var(--e), box-shadow var(--e);
+  }
+  .checkout-btn:hover { background: var(--ac-h); transform: translateY(-1px); box-shadow: 0 10px 24px rgba(232,59,59,.32); }
+  .express {
+    width: 140px;
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 52px;
+    background: #ffc439; color: #003087;
+    border: 0; border-radius: var(--r);
+    font: 800 13px italic "Helvetica Neue", var(--f);
+    letter-spacing: -.01em;
+    cursor: pointer;
+    transition: background var(--e), transform var(--e);
+  }
+  .express:hover { background: #ffb800; transform: translateY(-1px); }
+
+  /* ── Bottom back arrow ─────────────────────────────────────────────── */
+  .back {
+    margin-top: 28px;
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 600 12px var(--mono);
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--tx2);
+    border: 0; background: transparent;
+    cursor: pointer; padding: 0;
+    transition: color var(--e);
+  }
+  .back:hover { color: var(--ac); }
+  .back svg { width: 16px; height: 16px; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="brand-mark">T</div>
+  <div class="nav__brand">Therum Commerce <small>· Counter cart</small></div>
+  <div class="nav__spacer"></div>
+  <button class="nav__icon-btn" aria-label="Cart">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 4h2l2.5 12h11l2-8H6.5"/>
+      <circle cx="9" cy="20" r="1.5" fill="currentColor"/>
+      <circle cx="17" cy="20" r="1.5" fill="currentColor"/>
+    </svg>
+    <span class="nav__badge">3</span>
+  </button>
+  <button class="nav__icon-btn" aria-label="Account">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>
+    </svg>
+  </button>
+</nav>
+
+<main class="page">
+
+  <div class="page-head">
+    <h1>Shopping Cart</h1>
+    <div class="page-head__meta">3 items · USD</div>
+  </div>
+
+  <section class="cart">
+    <div class="cart__head">
+      <div></div>
+      <div class="col-product">Product</div>
+      <div class="col-price">Price</div>
+      <div class="col-qty">Quantity</div>
+      <div class="col-total">Total</div>
+      <div></div>
+    </div>
+
+    <div class="cart__row">
+      <div class="cart__image" style="background:#1a1a1a;color:#fff">🟥</div>
+      <div class="cart__info">
+        <div class="cart__title">Therum Studio Tee</div>
+        <div class="cart__sku">SKU · TS-2024-RED-LG</div>
+        <div class="cart__attrs">Therum · Red · Large · Cotton</div>
+      </div>
+      <div class="cart__price">$29.00</div>
+      <div>
+        <div class="qty">
+          <button class="qty__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          <div class="qty__val">1</div>
+          <button class="qty__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        </div>
+      </div>
+      <div class="cart__total">$29.00</div>
+      <button class="cart__remove" aria-label="Remove">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+    </div>
+
+    <div class="cart__row">
+      <div class="cart__image" style="background:#2a2a2a;color:#fff">🧥</div>
+      <div class="cart__info">
+        <div class="cart__title">Heavyweight Hoodie</div>
+        <div class="cart__sku">SKU · PF-HH-BLK-M</div>
+        <div class="cart__attrs">Printful · Black · Medium · Fleece</div>
+      </div>
+      <div class="cart__price">$68.80</div>
+      <div>
+        <div class="qty">
+          <button class="qty__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          <div class="qty__val">2</div>
+          <button class="qty__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        </div>
+      </div>
+      <div class="cart__total">$137.60</div>
+      <button class="cart__remove" aria-label="Remove">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+    </div>
+
+    <div class="cart__row">
+      <div class="cart__image" style="background:#627eea;color:#fff">🧢</div>
+      <div class="cart__info">
+        <div class="cart__title">Patch Cap</div>
+        <div class="cart__sku">SKU · PP-CAP-OCN-OS</div>
+        <div class="cart__attrs">Prod Partner · Ocean · One size · Twill</div>
+      </div>
+      <div class="cart__price">$24.00</div>
+      <div>
+        <div class="qty">
+          <button class="qty__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          <div class="qty__val">1</div>
+          <button class="qty__btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        </div>
+      </div>
+      <div class="cart__total">$24.00</div>
+      <button class="cart__remove" aria-label="Remove">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel__left">
+      <button class="panel-toggle">
+        Add note
+        <span class="panel-toggle__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </span>
+      </button>
+      <div class="panel-divider"></div>
+      <button class="panel-toggle">
+        Calculate shipping
+        <span class="panel-toggle__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="14" height="10" rx="2"/><path d="M17 9h2.5L21 12v4h-4"/><circle cx="7"  cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+        </span>
+      </button>
+    </div>
+
+    <div class="panel__right">
+      <div class="subtotal-row">
+        <div class="subtotal-row__label">Subtotal</div>
+        <div class="subtotal-row__value">$190.60</div>
+      </div>
+
+      <label class="terms">
+        <input type="checkbox" checked />
+        I agree to the <a href="#">Terms &amp; Conditions</a>
+      </label>
+
+      <div class="pay-row">
+        <button class="checkout-btn">Checkout</button>
+        <button class="express" aria-label="PayPal express checkout">
+          <span style="font-weight:800">Pay</span><span style="color:#001c64">Pal</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <button class="back">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Continue shopping
+  </button>
+
+</main>
+
+</body>
+</html>

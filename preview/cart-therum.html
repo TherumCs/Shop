@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shop by Therum — Therum cart preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --ac:   #e83b3b;  --ac-h: #c92e2e;  --ac-s: rgba(232,59,59,0.08);
+    --sf:   #fff;     --sf2:  #f7f7f6;  --sf3:  #fafaf9;
+    --bd:   rgba(0,0,0,0.08); --bd2: rgba(0,0,0,0.16);
+    --bg:   #f4f3f0;  --tx:   #0a0a0a;  --tx2:  #666;     --tx3:  #999;
+    --ok:   #10b981;
+    --f:    -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r: 10px; --r-lg: 14px;
+    --e: 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font: 14px/1.5 var(--f); color: var(--tx); background: var(--bg);
+    background-image: radial-gradient(ellipse 1200px 600px at 100% 0%, rgba(232,59,59,0.04), transparent 60%);
+    min-height: 100vh;
+  }
+
+  /* Top crumb (matches Therum checkout) */
+  .crumb {
+    max-width: 1280px; margin: 0 auto; padding: 22px 32px 0;
+    display: flex; align-items: center; gap: 14px;
+    font: 600 13px var(--f);
+  }
+  .crumb__close {
+    border: 1px solid var(--bd); background: var(--sf);
+    width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; color: var(--tx);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .crumb__close svg { width: 14px; height: 14px; }
+  .crumb__link { color: var(--tx3); text-decoration: none; font-weight: 500; }
+  .crumb__sep { color: var(--tx3); }
+  .crumb__here { color: var(--tx); }
+
+  .page  { max-width: 1280px; margin: 0 auto; padding: 0 32px 80px; }
+  .layout {
+    display: grid; grid-template-columns: 1fr 380px; gap: 28px;
+    margin-top: 22px; align-items: start;
+  }
+  @media (max-width: 920px) { .layout { grid-template-columns: 1fr; } }
+
+  h2.section-title {
+    margin: 0 0 14px;
+    font-size: 20px; font-weight: 700; letter-spacing: -.01em;
+    display: inline-flex; align-items: baseline; gap: 12px;
+  }
+  h2.section-title small {
+    font: 500 11px var(--mono); color: var(--tx3);
+    letter-spacing: .04em; text-transform: uppercase;
+  }
+
+  /* Cart card — editable summary */
+  .card {
+    background: var(--sf);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-lg);
+    padding: 22px 24px;
+    margin-bottom: 14px;
+  }
+  .line {
+    display: grid;
+    grid-template-columns: 76px 1fr auto;
+    column-gap: 16px;
+    padding: 14px 0;
+    border-top: 1px solid var(--bd);
+    position: relative;
+  }
+  .card > .line:first-of-type { border-top: 0; padding-top: 4px; }
+  .line__image {
+    width: 76px; height: 76px; border-radius: 10px;
+    background: var(--sf2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+  }
+  .line__body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .line__title { font-size: 14px; font-weight: 700; letter-spacing: -.005em; }
+  .line__cat   { font-size: 11px; color: var(--tx3); }
+  .line__selects {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 2px;
+  }
+  .select {
+    appearance: none; -webkit-appearance: none;
+    border: 1px solid var(--bd); background: var(--sf);
+    border-radius: 7px;
+    padding: 4px 22px 4px 10px;
+    font: 600 11px var(--f); color: var(--tx);
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='none' stroke='%23666' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round' d='M1 1l4 4 4-4'/></svg>");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+  .select:focus { outline: 0; border-color: var(--ac); box-shadow: 0 0 0 4px var(--ac-s); }
+
+  .line__price { font: 700 15px var(--mono); font-variant-numeric: tabular-nums; text-align: right; align-self: end; }
+  .line__remove {
+    position: absolute; top: 14px; right: 0;
+    border: 0; background: transparent;
+    width: 24px; height: 24px; border-radius: 50%;
+    color: var(--tx3); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .line__remove:hover { color: var(--ac); background: var(--sf2); }
+  .line__remove svg { width: 12px; height: 12px; }
+
+  /* Discount */
+  .discount {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--sf2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 10px;
+  }
+  .discount__icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--sf); border: 1px solid var(--bd);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--tx2);
+  }
+  .discount__icon svg { width: 14px; height: 14px; }
+  .discount__body { flex: 1; padding-left: 12px; }
+  .discount__title { font-size: 13px; font-weight: 700; }
+  .discount__sub { font-size: 11px; color: var(--tx3); }
+  .discount__btn {
+    border: 1px solid var(--bd); background: var(--sf);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font: 600 12px var(--f); color: var(--tx);
+    cursor: pointer;
+  }
+
+  .totals { margin-top: 4px; }
+  .totals-row {
+    display: flex; justify-content: space-between;
+    padding: 5px 0;
+    font-size: 13px; color: var(--tx2);
+    font-variant-numeric: tabular-nums;
+  }
+  .totals-row > span:last-child { font-family: var(--mono); color: var(--tx); }
+  .totals-row--total {
+    margin-top: 8px; padding-top: 12px;
+    border-top: 1px solid var(--bd);
+    color: var(--tx); font-size: 16px; font-weight: 700;
+  }
+  .totals-row--total > span:last-child { font-family: var(--f); font-size: 18px; }
+
+  /* Upsell */
+  .upsell {
+    background: var(--sf);
+    border: 1px dashed var(--bd2);
+    border-radius: var(--r-lg);
+    padding: 16px 20px;
+  }
+  .upsell-head { font: 600 11px var(--mono); color: var(--tx3); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 10px; }
+  .upsell-row { display: grid; grid-template-columns: 64px 1fr auto; column-gap: 14px; align-items: center; }
+  .upsell-img {
+    width: 64px; height: 64px; border-radius: 10px;
+    background: var(--sf2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    position: relative;
+  }
+  .upsell-img::before {
+    content: ''; position: absolute; top: -3px; left: -3px;
+    width: 12px; height: 12px; border-radius: 50%; background: var(--ac);
+  }
+  .upsell-title { font-size: 13px; font-weight: 700; }
+  .upsell-desc { font-size: 11px; color: var(--tx3); margin-top: 2px; max-width: 30ch; }
+  .upsell-add {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: transparent; border: 0; color: var(--ac);
+    cursor: pointer; font: 600 12px var(--f);
+    padding: 6px 0; margin-top: 4px;
+  }
+  .upsell-add svg { width: 12px; height: 12px; }
+  .upsell-price { text-align: right; display: flex; flex-direction: column; gap: 2px; }
+  .upsell-strike { font: 500 12px var(--mono); color: var(--tx3); text-decoration: line-through; }
+  .upsell-now { font: 700 14px var(--mono); color: var(--ac); }
+
+  /* CTA panel (sticky right) */
+  .cta-card {
+    background: var(--sf);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-lg);
+    padding: 22px 24px;
+    position: sticky; top: 18px;
+    display: flex; flex-direction: column;
+    gap: 14px;
+  }
+  .cta-head {
+    display: flex; flex-direction: column; gap: 4px;
+    padding-bottom: 14px; border-bottom: 1px solid var(--bd);
+  }
+  .cta-head__title { font: 700 14px var(--f); letter-spacing: -.005em; }
+  .cta-head__sub   { font-size: 11px; color: var(--tx3); }
+
+  .cta-line {
+    display: flex; justify-content: space-between;
+    font-size: 13px; color: var(--tx2);
+    font-variant-numeric: tabular-nums;
+  }
+  .cta-line > span:last-child { color: var(--tx); font-family: var(--mono); }
+  .cta-line--total {
+    border-top: 1px solid var(--bd); padding-top: 12px; margin-top: 4px;
+    color: var(--tx); font-weight: 700; font-size: 17px;
+  }
+  .cta-line--total > span:last-child { font-family: var(--f); font-size: 20px; }
+
+  .cta-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; height: 52px;
+    background: var(--ac); color: #fff;
+    border: 0; border-radius: var(--r);
+    font: 700 14px var(--f);
+    cursor: pointer;
+    transition: background var(--e), transform var(--e), box-shadow var(--e);
+  }
+  .cta-btn:hover { background: var(--ac-h); transform: translateY(-1px); box-shadow: 0 12px 28px rgba(232,59,59,.32); }
+  .cta-btn svg { width: 14px; height: 14px; }
+
+  .quick-pay {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .quick-btn {
+    height: 44px; border-radius: var(--r);
+    border: 1px solid var(--bd);
+    background: var(--sf);
+    cursor: pointer;
+    font: 700 12px var(--f);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .quick-apple  { background: #000; color: #fff; border-color: #000; }
+  .quick-google { background: #fff; color: #1a1a1a; }
+
+  .secure {
+    text-align: center; font-size: 11px; color: var(--tx3);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .secure svg { width: 12px; height: 12px; }
+</style>
+</head>
+<body>
+
+<div class="crumb">
+  <button class="crumb__close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button>
+  <span class="crumb__here">Shopping Cart</span>
+  <span class="crumb__sep">›</span>
+  <a class="crumb__link">Checkout</a>
+</div>
+
+<main class="page">
+  <div class="layout">
+
+    <section>
+      <h2 class="section-title">Your Cart <small>3 items</small></h2>
+
+      <div class="card">
+        <div class="line">
+          <div class="line__image" style="background:#1a1a1a;color:#fff">🟥</div>
+          <div class="line__body">
+            <div class="line__title">Therum Studio Tee</div>
+            <div class="line__cat">Apparel · Tops</div>
+            <div class="line__selects">
+              <select class="select"><option>Cotton</option></select>
+              <select class="select"><option>Red</option><option>Black</option></select>
+              <select class="select"><option>Large</option><option>Medium</option></select>
+              <select class="select"><option>Qty 1</option><option>Qty 2</option></select>
+            </div>
+          </div>
+          <div class="line__price">$29.00</div>
+          <button class="line__remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button>
+        </div>
+
+        <div class="line">
+          <div class="line__image" style="background:#2a2a2a;color:#fff">🧥</div>
+          <div class="line__body">
+            <div class="line__title">Heavyweight Hoodie</div>
+            <div class="line__cat">Apparel · Outerwear</div>
+            <div class="line__selects">
+              <select class="select"><option>Fleece</option></select>
+              <select class="select"><option>Black</option></select>
+              <select class="select"><option>Medium</option></select>
+              <select class="select"><option>Qty 2</option></select>
+            </div>
+          </div>
+          <div class="line__price">$137.60</div>
+          <button class="line__remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button>
+        </div>
+
+        <div class="line">
+          <div class="line__image" style="background:#627eea;color:#fff">🧢</div>
+          <div class="line__body">
+            <div class="line__title">Patch Cap</div>
+            <div class="line__cat">Accessories</div>
+            <div class="line__selects">
+              <select class="select"><option>Twill</option></select>
+              <select class="select"><option>Ocean</option></select>
+              <select class="select"><option>One size</option></select>
+              <select class="select"><option>Qty 1</option></select>
+            </div>
+          </div>
+          <div class="line__price">$24.00</div>
+          <button class="line__remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button>
+        </div>
+
+        <div class="discount">
+          <div class="discount__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          </div>
+          <div class="discount__body">
+            <div class="discount__title">Discount code</div>
+            <div class="discount__sub">Save 20% with code STUDIO20</div>
+          </div>
+          <button class="discount__btn">Add code</button>
+        </div>
+
+        <div class="totals">
+          <div class="totals-row"><span>Subtotal</span><span>$190.60</span></div>
+          <div class="totals-row"><span>Shipping</span><span>Calculated next</span></div>
+          <div class="totals-row"><span>Tax</span><span>Calculated next</span></div>
+          <div class="totals-row totals-row--total"><span>Estimated total</span><span>$190.60</span></div>
+        </div>
+      </div>
+
+      <div class="upsell">
+        <div class="upsell-head">Recommended for you</div>
+        <div class="upsell-row">
+          <div class="upsell-img" style="background:#fafafa">📦</div>
+          <div>
+            <div class="upsell-title">Therum Studio Bundle</div>
+            <div class="upsell-desc">Tee + Cap + Sticker pack — saves 15% vs. buying individually.</div>
+            <button class="upsell-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add to your order</button>
+          </div>
+          <div class="upsell-price">
+            <div class="upsell-strike">$61.00</div>
+            <div class="upsell-now">$51.85</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="cta-card">
+      <div class="cta-head">
+        <div class="cta-head__title">Ready to check out</div>
+        <div class="cta-head__sub">Shipping &amp; tax calculated on the next step.</div>
+      </div>
+
+      <div>
+        <div class="cta-line"><span>Subtotal</span><span>$190.60</span></div>
+        <div class="cta-line cta-line--total"><span>Total</span><span>$190.60</span></div>
+      </div>
+
+      <button class="cta-btn">Continue to payment <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+
+      <div class="quick-pay">
+        <button class="quick-btn quick-apple">&#xF8FF;&nbsp;Pay</button>
+        <button class="quick-btn quick-google">G Pay</button>
+      </div>
+
+      <div class="secure">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Encrypted end-to-end · No card data stored
+      </div>
+    </aside>
+
+  </div>
+</main>
+</body>
+</html>

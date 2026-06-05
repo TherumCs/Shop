@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Therum · Received</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{--ac:#e83b3b;--ac-h:#c92e2e;--ac-s:rgba(232,59,59,.08);--sf:#fff;--sf2:#f7f7f6;--sf3:#fafaf9;--bd:rgba(0,0,0,.08);--bd2:rgba(0,0,0,.16);--bg:#f4f3f0;--tx:#0a0a0a;--tx2:#666;--tx3:#999;--ok:#10b981;--f:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;--r:10px;--r-lg:14px;--e:.22s cubic-bezier(.22,.61,.36,1)}
+  *{box-sizing:border-box}html,body{margin:0;padding:0}body{font:14px/1.5 var(--f);color:var(--tx);background:var(--bg);background-image:radial-gradient(ellipse 1200px 600px at 100% 0%,rgba(232,59,59,.04),transparent 60%);min-height:100vh}
+
+  .crumb{max-width:1280px;margin:0 auto;padding:22px 32px 0;display:flex;align-items:center;gap:14px;font:600 13px var(--f)}
+  .crumb__close{border:1px solid var(--bd);background:var(--sf);width:32px;height:32px;border-radius:50%;cursor:pointer;color:var(--tx);display:inline-flex;align-items:center;justify-content:center}
+  .crumb__close svg{width:14px;height:14px}
+  .crumb__step{color:var(--ok);display:inline-flex;align-items:center;gap:6px}
+  .crumb__step--here{color:var(--tx)}
+  .crumb__check{width:14px;height:14px;border-radius:50%;background:var(--ok);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+  .crumb__check svg{width:8px;height:8px}
+  .crumb__sep{color:var(--tx3)}
+
+  .page{max-width:1280px;margin:0 auto;padding:0 32px 80px}
+  .layout{display:grid;grid-template-columns:1fr 480px;gap:28px;margin-top:22px;align-items:start}
+  @media (max-width:1040px){.layout{grid-template-columns:1fr}}
+
+  h2.section-title{margin:0 0 14px;font-size:20px;font-weight:700;letter-spacing:-.01em;display:inline-flex;align-items:baseline;gap:12px}
+  h2.section-title small{font:500 11px var(--mono);color:var(--ok);letter-spacing:.04em;text-transform:uppercase}
+
+  .card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r-lg);padding:22px 24px;margin-bottom:14px}
+
+  .line{display:grid;grid-template-columns:76px 1fr auto;column-gap:16px;padding:14px 0;border-top:1px solid var(--bd)}
+  .card>.line:first-of-type{border-top:0;padding-top:4px}
+  .line__image{width:76px;height:76px;border-radius:10px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:30px}
+  .line__body{min-width:0}
+  .line__title{font-size:14px;font-weight:700;letter-spacing:-.005em}
+  .line__cat{font-size:11px;color:var(--tx3);margin-top:2px}
+  .line__attrs{font-size:11px;color:var(--tx2);margin-top:4px}
+  .line__attrs b{color:var(--tx);font-weight:600}
+  .line__price{font:700 15px var(--mono);font-variant-numeric:tabular-nums;text-align:right;align-self:start}
+
+  .totals{margin-top:4px}
+  .totals-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:var(--tx2);font-variant-numeric:tabular-nums}
+  .totals-row>span:last-child{font-family:var(--mono);color:var(--tx)}
+  .totals-row--total{margin-top:8px;padding-top:12px;border-top:1px solid var(--bd);color:var(--tx);font-size:16px;font-weight:700}
+  .totals-row--total>span:last-child{font-family:var(--f);font-size:18px}
+
+  /* Confirmation aside */
+  .pay-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r-lg);padding:26px 28px;position:sticky;top:18px}
+
+  .receipt-hero{text-align:center;padding-bottom:22px;border-bottom:1px solid var(--bd);margin-bottom:22px}
+  .receipt-check{width:72px;height:72px;border-radius:50%;background:var(--ac-s);color:var(--ac);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;animation:pop .5s var(--e)}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}
+  .receipt-check svg{width:36px;height:36px}
+  .receipt-eyebrow{font:700 11px var(--mono);color:var(--ok);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+  .receipt-title{margin:0 0 6px;font-size:20px;font-weight:700;letter-spacing:-.01em}
+  .receipt-sub{margin:0;font-size:12px;color:var(--tx2)}
+  .receipt-sub b{color:var(--tx);font-weight:600}
+  .receipt-sub .num{font-family:var(--mono);font-weight:700;letter-spacing:.04em}
+
+  .receipt-row{display:flex;justify-content:space-between;padding:8px 0;font-size:13px;color:var(--tx2);border-bottom:1px solid var(--bd)}
+  .receipt-row:last-of-type{border-bottom:0}
+  .receipt-row>span:last-child{color:var(--tx);font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .receipt-row__label{display:inline-flex;align-items:center;gap:6px}
+
+  .pay-summary{background:var(--sf2);border-radius:10px;padding:12px 14px;margin:18px 0 14px}
+  .pay-summary .totals-row{padding:4px 0}
+  .pay-summary .totals-row--total{margin-top:6px;padding-top:10px;border-top:1px solid var(--bd)}
+
+  .actions{display:flex;gap:10px}
+  .btn{flex:1;height:50px;border:0;border-radius:var(--r);cursor:pointer;font:700 14px var(--f);transition:background var(--e),transform var(--e)}
+  .btn--primary{background:var(--ac);color:#fff}.btn--primary:hover{background:var(--ac-h);transform:translateY(-1px);box-shadow:0 12px 28px rgba(232,59,59,.32)}
+  .btn--ghost{background:transparent;color:var(--tx);border:1px solid var(--bd)}.btn--ghost:hover{background:var(--sf2)}
+
+  .pay-foot{margin-top:14px;display:flex;align-items:center;justify-content:center;gap:10px;font:500 11px var(--f);color:var(--tx3)}
+  .pay-foot__sep{opacity:.4}
+</style>
+</head>
+<body>
+
+<div class="crumb">
+  <button class="crumb__close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button>
+  <span class="crumb__step"><span class="crumb__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Cart</span>
+  <span class="crumb__sep">›</span>
+  <span class="crumb__step"><span class="crumb__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Checkout</span>
+  <span class="crumb__sep">›</span>
+  <span class="crumb__step crumb__step--here">Confirmed</span>
+</div>
+
+<main class="page">
+  <div class="layout">
+
+    <section>
+      <h2 class="section-title">Order Summary <small>✓ Paid · 3 items</small></h2>
+
+      <div class="card">
+        <div class="line">
+          <div class="line__image" style="background:#1a1a1a;color:#fff">🟥</div>
+          <div class="line__body">
+            <div class="line__title">Therum Studio Tee</div>
+            <div class="line__cat">Apparel · Tops</div>
+            <div class="line__attrs">Cotton · Red · <b>Large</b> · Qty 1</div>
+          </div>
+          <div class="line__price">$29.00</div>
+        </div>
+        <div class="line">
+          <div class="line__image" style="background:#2a2a2a;color:#fff">🧥</div>
+          <div class="line__body">
+            <div class="line__title">Heavyweight Hoodie</div>
+            <div class="line__cat">Apparel · Outerwear</div>
+            <div class="line__attrs">Fleece · Black · <b>Medium</b> · Qty 2</div>
+          </div>
+          <div class="line__price">$137.60</div>
+        </div>
+        <div class="line">
+          <div class="line__image" style="background:#627eea;color:#fff">🧢</div>
+          <div class="line__body">
+            <div class="line__title">Patch Cap</div>
+            <div class="line__cat">Accessories</div>
+            <div class="line__attrs">Twill · Ocean · <b>One size</b> · Qty 1</div>
+          </div>
+          <div class="line__price">$24.00</div>
+        </div>
+
+        <div class="totals" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bd)">
+          <div class="totals-row"><span>Subtotal</span><span>$190.60</span></div>
+          <div class="totals-row"><span>Shipping</span><span>Free</span></div>
+          <div class="totals-row"><span>Tax (8.75%)</span><span>$16.68</span></div>
+          <div class="totals-row totals-row--total"><span>Total paid</span><span>$207.28</span></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="pay-card">
+      <div class="receipt-hero">
+        <div class="receipt-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="receipt-eyebrow">Payment Received</div>
+        <h2 class="receipt-title">Thanks, Jenny.</h2>
+        <p class="receipt-sub">Order <span class="num">SH-20260604-A1B2C3</span><br>receipt to <b>jenny@example.com</b></p>
+      </div>
+
+      <div class="receipt-row">
+        <span class="receipt-row__label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          Payment method
+        </span>
+        <span>Visa ··· 4242</span>
+      </div>
+      <div class="receipt-row">
+        <span class="receipt-row__label">Transaction</span>
+        <span>txn_4abbs451515</span>
+      </div>
+      <div class="receipt-row">
+        <span class="receipt-row__label">Paid at</span>
+        <span>2026-06-04 14:32</span>
+      </div>
+      <div class="receipt-row">
+        <span class="receipt-row__label">Status</span>
+        <span style="color:var(--ok)">Captured</span>
+      </div>
+
+      <div class="pay-summary">
+        <div class="totals-row"><span>Total</span><span>$207.28</span></div>
+        <div class="totals-row totals-row--total"><span>Paid</span><span>$207.28</span></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn--ghost">View order</button>
+        <button class="btn btn--primary">Keep shopping</button>
+      </div>
+
+      <div class="pay-foot">Powered by Therum<span class="pay-foot__sep">·</span><a href="#" style="color:var(--tx2);text-decoration:none">Terms</a><span class="pay-foot__sep">·</span><a href="#" style="color:var(--tx2);text-decoration:none">Privacy</a></div>
+    </aside>
+
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shop by Therum — Sequence checkout preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --ac:   #e83b3b;
+    --ac-h: #c92e2e;
+    --ac-s: rgba(232, 59, 59, 0.08);
+    --sf:   #ffffff;
+    --sf2:  #f7f7f6;
+    --sf3:  #fafaf9;
+    --bd:   rgba(0, 0, 0, 0.08);
+    --bd2:  rgba(0, 0, 0, 0.16);
+    --bg:   #f4f3f0;
+    --tx:   #0a0a0a;
+    --tx2:  #666;
+    --tx3:  #999;
+    --ok:   #10b981;
+    --premium: #f4c430;
+    --f:    -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r:    10px;
+    --r-lg: 14px;
+    --r-xl: 18px;
+    --e:    0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font: 14px/1.5 var(--f);
+    color: var(--tx);
+    background: var(--sf);
+    min-height: 100vh;
+  }
+
+  /* Full-bleed split: left review on soft bg, right form on white */
+  .checkout {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    min-height: 100vh;
+  }
+  @media (max-width: 980px) { .checkout { grid-template-columns: 1fr; } }
+
+  /* ── LEFT — review ────────────────────────────────────────────────── */
+  .review {
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 600px 400px at 0% 0%, rgba(232,59,59,0.04), transparent 60%);
+    padding: 32px 40px;
+  }
+
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font: 700 16px var(--f); letter-spacing: -.01em;
+  }
+  .brand-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--ac); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; letter-spacing: -.02em; }
+
+  .back-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin: 30px 0 22px;
+    color: var(--tx2); cursor: pointer;
+    border: 0; background: transparent;
+    font: 600 13px var(--f);
+    transition: color var(--e);
+  }
+  .back-link:hover { color: var(--tx); }
+  .back-link svg { width: 14px; height: 14px; }
+
+  .review-card {
+    background: var(--sf);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-xl);
+    padding: 22px 24px;
+  }
+
+  .review-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .review-head h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.005em; }
+  .badge-premium {
+    background: rgba(244,196,48,.18);
+    color: #8a6500;
+    border: 1px solid rgba(244,196,48,.45);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font: 700 10px var(--mono);
+    letter-spacing: .08em; text-transform: uppercase;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .badge-premium::before { content: '★'; font-size: 11px; }
+
+  /* Items */
+  .item {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    column-gap: 14px;
+    align-items: center;
+    background: var(--sf2);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-lg);
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .item__image {
+    width: 72px; height: 72px; border-radius: 10px;
+    background: linear-gradient(135deg, #d4cdb8, #b8af9a);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    flex-shrink: 0;
+  }
+  .item__info { min-width: 0; }
+  .item__title { font-size: 14px; font-weight: 700; letter-spacing: -.005em; }
+  .item__meta {
+    margin-top: 2px;
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--tx3);
+  }
+  .item__meta svg { width: 12px; height: 12px; }
+  .item__price {
+    text-align: right;
+    font: 700 14px var(--mono); font-variant-numeric: tabular-nums;
+  }
+  .item__price-unit { font-size: 11px; color: var(--tx3); display: block; font-family: var(--f); font-weight: 500; }
+
+  /* Promo */
+  .promo {
+    margin-top: 16px;
+  }
+  .promo__input-row {
+    display: flex; gap: 8px;
+    background: var(--sf);
+    border: 1px solid var(--bd);
+    border-radius: var(--r);
+    padding: 4px 4px 4px 14px;
+  }
+  .promo__input {
+    flex: 1; border: 0; outline: 0; background: transparent;
+    font: 600 13px var(--mono); letter-spacing: .04em;
+    color: var(--tx);
+  }
+  .promo__apply {
+    border: 0; background: var(--tx); color: #fff;
+    border-radius: 8px;
+    padding: 0 14px;
+    font: 700 12px var(--f);
+    cursor: pointer;
+    transition: background var(--e);
+  }
+  .promo__apply:hover { background: var(--ac); }
+
+  .promo__chips {
+    display: inline-flex; gap: 6px;
+    margin-top: 10px;
+  }
+  .chip {
+    background: rgba(16,185,129,.08); color: #047857;
+    border: 1px solid rgba(16,185,129,.18);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font: 600 11px var(--mono);
+    letter-spacing: .04em;
+    cursor: pointer;
+    transition: background var(--e);
+  }
+  .chip:hover { background: rgba(16,185,129,.14); }
+
+  /* Totals */
+  .totals {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--bd);
+  }
+  .totals-row {
+    display: flex; justify-content: space-between;
+    padding: 5px 0;
+    font-size: 13px; color: var(--tx2);
+    font-variant-numeric: tabular-nums;
+  }
+  .totals-row > span:last-child { font-family: var(--mono); color: var(--tx); }
+  .totals-row--neg > span:last-child { color: var(--ok); }
+  .totals-row__inline-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .tag-inclusive {
+    background: var(--sf2); color: var(--tx2);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    padding: 2px 7px;
+    font: 600 10px var(--mono);
+    letter-spacing: .04em;
+  }
+  .totals-row--total {
+    margin-top: 8px; padding-top: 12px;
+    border-top: 1px solid var(--bd);
+    color: var(--tx); font-weight: 700;
+  }
+  .totals-row--total span:first-child { font-size: 17px; }
+  .totals-row--total span:last-child  { font-size: 20px; font-family: var(--f); }
+
+  /* Footer */
+  .review-foot {
+    margin-top: 24px;
+    display: flex; gap: 12px;
+    font: 500 11px var(--mono);
+    color: var(--tx3);
+    letter-spacing: .04em; text-transform: uppercase;
+  }
+  .review-foot a { color: var(--tx3); text-decoration: none; }
+  .review-foot a:hover { color: var(--tx); }
+
+  /* ── RIGHT — form ─────────────────────────────────────────────────── */
+  .form-side { padding: 32px 56px; }
+
+  .stepper {
+    display: flex; align-items: center; gap: 0;
+    margin-bottom: 30px;
+  }
+  .step {
+    display: inline-flex; align-items: center; gap: 10px;
+    font: 600 14px var(--f);
+    color: var(--tx3);
+  }
+  .step__num {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--sf2);
+    color: var(--tx3);
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 700 12px var(--mono);
+    border: 1px solid var(--bd);
+    transition: all var(--e);
+  }
+  .step--done .step__num {
+    background: var(--ac);
+    color: #fff;
+    border-color: var(--ac);
+  }
+  .step--done .step__num::before {
+    content: ''; width: 8px; height: 4px;
+    border-left: 2px solid #fff; border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translate(1px, -1px);
+  }
+  .step--done .step__num span { display: none; }
+  .step--done { color: var(--tx); }
+  .step--active .step__num {
+    background: var(--tx);
+    color: #fff;
+    border-color: var(--tx);
+  }
+  .step--active { color: var(--tx); }
+  .step__line {
+    flex: 1;
+    height: 1px; background: var(--bd);
+    margin: 0 16px;
+    min-width: 36px;
+  }
+  .step--done + .step__line {
+    background: var(--ac);
+  }
+
+  .form-side h1 {
+    margin: 0 0 22px;
+    font-size: 22px; font-weight: 700; letter-spacing: -.01em;
+  }
+
+  .form-section-label {
+    font-size: 13px; font-weight: 700;
+    color: var(--tx);
+    margin-bottom: 10px;
+  }
+
+  /* Method cards */
+  .method-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .method-card {
+    border: 1.5px solid var(--bd);
+    border-radius: var(--r);
+    padding: 18px 16px;
+    background: var(--sf);
+    cursor: pointer;
+    transition: all var(--e);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .method-card:hover { border-color: var(--bd2); }
+  .method-card.active {
+    border-color: var(--ac);
+    background: var(--ac-s);
+  }
+  .method-card__icon {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: var(--sf2);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--tx2);
+  }
+  .method-card__icon svg { width: 16px; height: 16px; }
+  .method-card.active .method-card__icon {
+    background: var(--ac);
+    color: #fff;
+  }
+  .method-card__label { font: 600 13px var(--f); letter-spacing: -.005em; }
+
+  /* Inputs */
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .field__label {
+    font: 500 13px var(--f); color: var(--tx);
+  }
+  .field__label .req { color: var(--ac); }
+  .input {
+    height: 46px; padding: 0 14px;
+    background: var(--sf2); border: 1px solid transparent;
+    border-radius: var(--r);
+    font: 14px var(--f); color: var(--tx);
+    transition: border-color var(--e), background var(--e), box-shadow var(--e);
+  }
+  .input:focus { outline: 0; border-color: var(--ac); background: var(--sf); box-shadow: 0 0 0 4px var(--ac-s); }
+  .input::placeholder { color: var(--tx3); }
+  .input--mono { font-family: var(--mono); letter-spacing: .04em; }
+
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row-2 .field { margin-bottom: 14px; }
+
+  .input-with-icon {
+    position: relative;
+  }
+  .input-with-icon .input { padding-left: 46px; }
+  .input-with-icon__icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 22px; height: 16px; border-radius: 3px;
+    background: linear-gradient(135deg, #d4d4d4, #999);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Mobile / country */
+  .country-input {
+    display: flex; align-items: center; gap: 10px;
+    height: 46px; padding: 0 14px;
+    background: var(--sf2);
+    border: 1px solid transparent;
+    border-radius: var(--r);
+    font: 14px var(--f);
+  }
+  .country-input:focus-within { background: var(--sf); border-color: var(--ac); box-shadow: 0 0 0 4px var(--ac-s); }
+  .country-flag {
+    width: 24px; height: 16px; border-radius: 2px; flex-shrink: 0;
+    background: linear-gradient(180deg, #012169 50%, #fff 50%);
+    position: relative; overflow: hidden;
+  }
+  .country-flag::after {
+    content: '★ ★ ★ ★ ★';
+    position: absolute; right: 2px; top: 1px;
+    color: #fff; font-size: 4px; letter-spacing: 0.5px;
+  }
+  .country-input__caret { margin-left: auto; color: var(--tx3); }
+
+  .manual-link {
+    background: transparent; border: 0;
+    color: var(--ac);
+    font: 600 12px var(--f);
+    cursor: pointer;
+    padding: 0;
+    margin-top: -6px;
+    margin-bottom: 16px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .manual-link:hover { color: var(--ac-h); }
+
+  /* Save checkbox card */
+  .save-card {
+    background: rgba(16,185,129,.06);
+    border: 1px solid rgba(16,185,129,.2);
+    border-radius: var(--r);
+    padding: 14px 16px;
+    display: flex; gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .save-checkbox {
+    appearance: none; -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border: 1.5px solid var(--ok);
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    background: var(--sf);
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: background var(--e);
+  }
+  .save-checkbox:checked { background: var(--ok); }
+  .save-checkbox:checked::after {
+    content: ''; position: absolute; left: 5px; top: 1px;
+    width: 5px; height: 10px;
+    border: solid #fff; border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .save-card__title { font: 700 13px var(--f); color: var(--tx); }
+  .save-card__sub   { font-size: 12px; color: var(--tx2); margin-top: 2px; line-height: 1.4; }
+
+  /* Pay button */
+  .pay-btn {
+    width: 100%;
+    height: 56px;
+    background: var(--ac); color: #fff;
+    border: 0; border-radius: var(--r);
+    font: 700 15px var(--f); letter-spacing: .005em;
+    cursor: pointer;
+    transition: background var(--e), transform var(--e), box-shadow var(--e);
+    font-variant-numeric: tabular-nums;
+  }
+  .pay-btn:hover { background: var(--ac-h); transform: translateY(-1px); box-shadow: 0 12px 28px rgba(232,59,59,.32); }
+
+  .pay-note {
+    text-align: center; margin-top: 12px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font: 500 11px var(--f); color: var(--tx3);
+  }
+  .pay-note svg { width: 12px; height: 12px; }
+
+  /* ── 6-rail method grid + panels (matches OG demo) ───────────────── */
+  .method-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .method-grid .method-card {
+    align-items: center; text-align: center;
+    padding: 14px 10px;
+    border: 1.5px solid var(--bd);
+    border-radius: var(--r);
+    background: var(--sf);
+    cursor: pointer;
+    transition: all var(--e);
+    gap: 6px;
+  }
+  .method-grid .method-card:hover { border-color: var(--bd2); }
+  .method-grid .method-card.active {
+    border-color: var(--ac);
+    background: var(--ac-s);
+  }
+  .method-card__icon-mark {
+    width: 30px; height: 30px; border-radius: 7px;
+    color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 700 12px var(--f); letter-spacing: -.02em;
+  }
+  .method-grid .method-card__label {
+    font: 700 13px var(--f); letter-spacing: -.005em;
+  }
+  .method-card__sub {
+    font: 500 10px var(--f);
+    color: var(--tx3);
+    line-height: 1.3;
+    letter-spacing: 0;
+  }
+
+  .method-panel { display: none; animation: panelIn .28s var(--e); }
+  .method-panel.active { display: block; }
+  @keyframes panelIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .method-note {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--sf2);
+    border-radius: var(--r);
+    font-size: 11px; line-height: 1.5;
+    color: var(--tx3); text-align: center;
+  }
+
+  /* Wallets */
+  .wallet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .wallet-btn {
+    height: 48px; border-radius: var(--r);
+    font: 700 14px var(--f);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform var(--e), box-shadow var(--e);
+  }
+  .wallet-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.1); }
+  .wallet-apple  { background: #000; color: #fff; }
+  .wallet-google { background: #fff; color: #1a1a1a; border-color: var(--bd2); }
+  .wallet-paypal { background: #fff; color: #003087; border-color: var(--bd2); font-style: italic; font-weight: 800; grid-column: span 2; }
+  .wallet-shop   { background: #5a31f4; color: #fff; grid-column: span 2; }
+
+  /* BNPL */
+  .bnpl-list { display: flex; flex-direction: column; gap: 8px; }
+  .bnpl-card {
+    display: grid; grid-template-columns: 56px 1fr auto; column-gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--sf2); border: 1.5px solid transparent;
+    border-radius: var(--r);
+    cursor: pointer; transition: all var(--e);
+  }
+  .bnpl-card:hover { background: var(--sf3); border-color: var(--bd2); }
+  .bnpl-card.active { border-color: var(--ac); background: var(--ac-s); }
+  .bnpl-logo {
+    width: 56px; height: 28px; border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 700 11px var(--f); letter-spacing: -.02em;
+  }
+  .bnpl-klarna       { background: #ffa8b8; color: #000; }
+  .bnpl-affirm       { background: #060809; color: #fff; }
+  .bnpl-afterpay     { background: #b2fce4; color: #000; }
+  .bnpl-sezzle       { background: #fffd6d; color: #000; }
+  .bnpl-zip          { background: #aa8fff; color: #fff; }
+  .bnpl-paypalcredit { background: #003087; color: #fff; font-size: 9px; letter-spacing: 0; }
+  .bnpl-name { font: 700 13px var(--f); }
+  .bnpl-sub  { font-size: 11px; color: var(--tx3); margin-top: 1px; }
+  .bnpl-chev { color: var(--tx3); font-size: 16px; }
+
+  /* Bank */
+  .bank-card {
+    display: grid; grid-template-columns: 48px 1fr auto; column-gap: 14px;
+    align-items: center;
+    padding: 14px;
+    background: var(--sf2); border: 1.5px solid transparent;
+    border-radius: var(--r);
+    cursor: pointer; transition: all var(--e);
+  }
+  .bank-card.active { border-color: var(--ac); background: var(--ac-s); }
+  .bank-ico {
+    width: 40px; height: 40px; border-radius: 8px;
+    background: var(--ok); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 700 16px var(--f);
+  }
+  .bank-name { font: 700 13px var(--f); }
+  .bank-sub  { font-size: 11px; color: var(--tx3); margin-top: 2px; line-height: 1.45; }
+
+  /* Crypto */
+  .crypto-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+  }
+  .crypto-chip {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 12px 6px;
+    background: var(--sf2); border: 1.5px solid transparent;
+    border-radius: var(--r);
+    cursor: pointer; transition: all var(--e);
+  }
+  .crypto-chip:hover { background: var(--sf3); border-color: var(--bd2); }
+  .crypto-chip.active { border-color: var(--ac); background: var(--ac-s); }
+  .crypto-sym {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font: 700 11px var(--f); color: #fff;
+  }
+  .crypto-btc  { background: #f7931a; }
+  .crypto-eth  { background: #627eea; }
+  .crypto-usdc { background: #2775ca; }
+  .crypto-usdt { background: #26a17b; }
+  .crypto-sol  { background: linear-gradient(135deg, #9945ff, #14f195); }
+  .crypto-xrp  { background: #23292f; }
+  .crypto-label { font: 600 11px var(--f); color: var(--tx2); }
+
+  /* P2P */
+  .p2p-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .p2p-card {
+    height: 52px; border-radius: var(--r);
+    border: 0; cursor: pointer;
+    font: 700 13px var(--f);
+    transition: transform var(--e), box-shadow var(--e);
+  }
+  .p2p-card:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.1); }
+  .p2p-cashapp { background: #00d632; color: #000; }
+  .p2p-venmo   { background: #3d95ce; color: #fff; }
+  .p2p-zelle   { background: #6d1ed4; color: #fff; }
+</style>
+</head>
+<body>
+
+<main class="checkout">
+
+  <!-- ─── LEFT — Review ───────────────────────────────────────────── -->
+  <section class="review">
+    <div class="brand">
+      <div class="brand-mark">T</div>
+      Checkout
+    </div>
+
+    <button class="back-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to cart
+    </button>
+
+    <div class="review-card">
+      <div class="review-head">
+        <h2>Order Review</h2>
+        <span class="badge-premium">Premium</span>
+      </div>
+
+      <div class="item">
+        <div class="item__image" style="background:#1a1a1a;color:#fff">🟥</div>
+        <div class="item__info">
+          <div class="item__title">Therum Studio Tee</div>
+          <div class="item__meta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            Therum · Red · Large
+          </div>
+        </div>
+        <div class="item__price">
+          $29.00
+          <span class="item__price-unit">1 unit</span>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="item__image" style="background:#2a2a2a;color:#fff">🧥</div>
+        <div class="item__info">
+          <div class="item__title">Heavyweight Hoodie</div>
+          <div class="item__meta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            Printful · Black · Medium
+          </div>
+        </div>
+        <div class="item__price">
+          $137.60
+          <span class="item__price-unit">2 units</span>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="item__image" style="background:#627eea;color:#fff">🧢</div>
+        <div class="item__info">
+          <div class="item__title">Patch Cap</div>
+          <div class="item__meta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            Prod Partner · Ocean · One size
+          </div>
+        </div>
+        <div class="item__price">
+          $24.00
+          <span class="item__price-unit">1 unit</span>
+        </div>
+      </div>
+
+      <!-- Promo -->
+      <div class="promo">
+        <div class="promo__input-row">
+          <input class="promo__input" value="STUDIO20" />
+          <button class="promo__apply">Apply</button>
+        </div>
+        <div class="promo__chips">
+          <span class="chip">5% Off</span>
+          <span class="chip">10% Off</span>
+          <span class="chip">15% Off</span>
+        </div>
+      </div>
+
+      <!-- Totals -->
+      <div class="totals">
+        <div class="totals-row"><span>Subtotal</span><span>$190.60</span></div>
+        <div class="totals-row totals-row--neg"><span>Discount (20%)</span><span>−$38.12</span></div>
+        <div class="totals-row totals-row--neg"><span>Store credit</span><span>−$10.00</span></div>
+        <div class="totals-row">
+          <span class="totals-row__inline-tag">Tax (8.75%)<span class="tag-inclusive">Inclusive</span></span>
+          <span>$12.96</span>
+        </div>
+        <div class="totals-row totals-row--total"><span>Total</span><span>$142.48</span></div>
+      </div>
+    </div>
+
+    <div class="review-foot">
+      <a href="#">Privacy</a>
+      <span>|</span>
+      <a href="#">Policy</a>
+    </div>
+  </section>
+
+  <!-- ─── RIGHT — Form ────────────────────────────────────────────── -->
+  <section class="form-side">
+
+    <div class="stepper">
+      <div class="step step--done">
+        <span class="step__num"><span>1</span></span>
+        Information
+      </div>
+      <div class="step__line"></div>
+      <div class="step step--active">
+        <span class="step__num"><span>2</span></span>
+        Payment
+      </div>
+      <div class="step__line"></div>
+      <div class="step">
+        <span class="step__num"><span>3</span></span>
+        Completed
+      </div>
+    </div>
+
+    <h1>Enter Payment Details</h1>
+
+    <div class="form-section-label">Select method</div>
+    <div class="method-grid">
+      <button class="method-card active" data-m="card">
+        <span class="method-card__icon"><span class="method-card__icon-mark" style="background:#1a1a1a">CC</span></span>
+        <span class="method-card__label">Card</span>
+        <span class="method-card__sub">Debit / Credit</span>
+      </button>
+      <button class="method-card" data-m="wallets">
+        <span class="method-card__icon"><span class="method-card__icon-mark" style="background:#000">⌘</span></span>
+        <span class="method-card__label">Wallets</span>
+        <span class="method-card__sub">Apple · Google · PayPal</span>
+      </button>
+      <button class="method-card" data-m="bnpl">
+        <span class="method-card__icon"><span class="method-card__icon-mark" style="background:#ffa8b8;color:#000">4×</span></span>
+        <span class="method-card__label">Pay later</span>
+        <span class="method-card__sub">Klarna · Affirm · Afterpay</span>
+      </button>
+      <button class="method-card" data-m="bank">
+        <span class="method-card__icon"><span class="method-card__icon-mark" style="background:var(--ok)">⏧</span></span>
+        <span class="method-card__label">Bank</span>
+        <span class="method-card__sub">Plaid · Saves ~2%</span>
+      </button>
+      <button class="method-card" data-m="crypto">
+        <span class="method-card__icon"><span class="method-card__icon-mark" style="background:#f7931a">₿</span></span>
+        <span class="method-card__label">Crypto</span>
+        <span class="method-card__sub">BTC · ETH · USDC · 50+</span>
+      </button>
+      <button class="method-card" data-m="p2p">
+        <span class="method-card__icon"><span class="method-card__icon-mark" style="background:#00d632">$</span></span>
+        <span class="method-card__label">P2P</span>
+        <span class="method-card__sub">Cash App · Venmo · Zelle</span>
+      </button>
+    </div>
+
+    <!-- ─── Card panel ────────────────────────────────────────── -->
+    <div class="method-panel active" data-panel="card">
+      <div class="field">
+        <label class="field__label">Card information <span class="req">*</span></label>
+        <div class="input-with-icon">
+          <span class="input-with-icon__icon"></span>
+          <input class="input input--mono" value="**** **** 1234 1234" />
+        </div>
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <input class="input input--mono" value="09/28" placeholder="MM/YY" />
+        </div>
+        <div class="field">
+          <input class="input input--mono" value="123" placeholder="CVV" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="field__label">Cardholder Name <span class="req">*</span></label>
+        <input class="input" value="Duran Clayton" />
+      </div>
+      <div class="field">
+        <label class="field__label">Mobile <span class="req">*</span></label>
+        <div class="country-input">
+          <span class="country-flag"></span>
+          Australia
+          <span class="country-input__caret">▾</span>
+        </div>
+      </div>
+      <div class="field">
+        <input class="input" placeholder="Address" />
+      </div>
+      <button class="manual-link">Enter address manually</button>
+    </div>
+
+    <!-- ─── Wallets panel ──────────────────────────────────────── -->
+    <div class="method-panel" data-panel="wallets">
+      <div class="wallet-grid">
+        <button class="wallet-btn wallet-apple">&#xf8ff;&nbsp;Pay</button>
+        <button class="wallet-btn wallet-google">G&nbsp;Pay</button>
+        <button class="wallet-btn wallet-paypal">PayPal</button>
+        <button class="wallet-btn wallet-shop">Shop&nbsp;Pay</button>
+      </div>
+      <div class="method-note">Customer authenticates inside the wallet — no card data touches Therum.</div>
+    </div>
+
+    <!-- ─── BNPL panel ─────────────────────────────────────────── -->
+    <div class="method-panel" data-panel="bnpl">
+      <div class="bnpl-list">
+        <label class="bnpl-card active">
+          <span class="bnpl-logo bnpl-klarna">Klarna</span>
+          <div class="bnpl-body">
+            <div class="bnpl-name">4 payments of <span data-quartertotal>$35.62</span></div>
+            <div class="bnpl-sub">0% interest · every 2 weeks</div>
+          </div>
+          <span class="bnpl-chev">›</span>
+        </label>
+        <label class="bnpl-card">
+          <span class="bnpl-logo bnpl-affirm">affirm</span>
+          <div class="bnpl-body">
+            <div class="bnpl-name">3, 6, or 12 monthly payments</div>
+            <div class="bnpl-sub">0–36% APR depending on credit</div>
+          </div>
+          <span class="bnpl-chev">›</span>
+        </label>
+        <label class="bnpl-card">
+          <span class="bnpl-logo bnpl-afterpay">Afterpay</span>
+          <div class="bnpl-body">
+            <div class="bnpl-name">4 payments of <span data-quartertotal>$35.62</span></div>
+            <div class="bnpl-sub">0% interest · every 2 weeks</div>
+          </div>
+          <span class="bnpl-chev">›</span>
+        </label>
+        <label class="bnpl-card">
+          <span class="bnpl-logo bnpl-sezzle">Sezzle</span>
+          <div class="bnpl-body">
+            <div class="bnpl-name">4 payments of <span data-quartertotal>$35.62</span></div>
+            <div class="bnpl-sub">Soft credit check</div>
+          </div>
+          <span class="bnpl-chev">›</span>
+        </label>
+        <label class="bnpl-card">
+          <span class="bnpl-logo bnpl-zip">Zip</span>
+          <div class="bnpl-body">
+            <div class="bnpl-name">4 payments of <span data-quartertotal>$35.62</span></div>
+            <div class="bnpl-sub">Bi-weekly · $1 per installment</div>
+          </div>
+          <span class="bnpl-chev">›</span>
+        </label>
+        <label class="bnpl-card">
+          <span class="bnpl-logo bnpl-paypalcredit">PP Credit</span>
+          <div class="bnpl-body">
+            <div class="bnpl-name">PayPal Credit</div>
+            <div class="bnpl-sub">6 months no interest on $99+</div>
+          </div>
+          <span class="bnpl-chev">›</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- ─── Bank panel ─────────────────────────────────────────── -->
+    <div class="method-panel" data-panel="bank">
+      <label class="bank-card active">
+        <span class="bank-ico">⏧</span>
+        <div class="bank-body">
+          <div class="bank-name">Connect with Plaid</div>
+          <div class="bank-sub">Pay directly from your bank. Saves ~2% in card fees — passed back to you.</div>
+        </div>
+        <span class="bnpl-chev">›</span>
+      </label>
+    </div>
+
+    <!-- ─── Crypto panel ───────────────────────────────────────── -->
+    <div class="method-panel" data-panel="crypto">
+      <div class="crypto-grid">
+        <label class="crypto-chip active"><span class="crypto-sym crypto-btc">₿</span><span class="crypto-label">BTC</span></label>
+        <label class="crypto-chip"><span class="crypto-sym crypto-eth">Ξ</span><span class="crypto-label">ETH</span></label>
+        <label class="crypto-chip"><span class="crypto-sym crypto-usdc">$</span><span class="crypto-label">USDC</span></label>
+        <label class="crypto-chip"><span class="crypto-sym crypto-usdt">₮</span><span class="crypto-label">USDT</span></label>
+        <label class="crypto-chip"><span class="crypto-sym crypto-sol">◎</span><span class="crypto-label">SOL</span></label>
+        <label class="crypto-chip"><span class="crypto-sym crypto-xrp">✕</span><span class="crypto-label">XRP</span></label>
+      </div>
+      <div class="method-note">QR code on confirm · ~10–15 min settlement · routed through AnyPay (50+ coins)</div>
+    </div>
+
+    <!-- ─── P2P panel ──────────────────────────────────────────── -->
+    <div class="method-panel" data-panel="p2p">
+      <div class="p2p-grid">
+        <button class="p2p-card p2p-cashapp">$&nbsp;Cash App</button>
+        <button class="p2p-card p2p-venmo">Venmo</button>
+        <button class="p2p-card p2p-zelle">Zelle</button>
+      </div>
+      <div class="method-note">Opens the app's QR · Zelle settles bank-to-bank in seconds</div>
+    </div>
+
+    <div class="save-card">
+      <input type="checkbox" class="save-checkbox" checked />
+      <div>
+        <div class="save-card__title">Securely save my information for 1-click checkout</div>
+        <div class="save-card__sub">Pay faster on Therum and everywhere Link is accepted.</div>
+      </div>
+    </div>
+
+    <button class="pay-btn" id="payBtn">Pay $142.48</button>
+    <div class="pay-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Encrypted end-to-end · No card data stored
+    </div>
+
+  </section>
+
+</main>
+
+<script>
+  ( function () {
+    var TOTAL = '$142.48';
+    var labels = {
+      card:    'Pay '            + TOTAL,
+      wallets: 'Continue with wallet',
+      bnpl:    'Continue to Klarna',
+      bank:    'Connect bank account',
+      crypto:  'Generate QR · '  + TOTAL,
+      p2p:     'Open Cash App',
+    };
+
+    var cards  = document.querySelectorAll( '.method-grid .method-card' );
+    var panels = document.querySelectorAll( '.method-panel' );
+    var pay    = document.getElementById( 'payBtn' );
+
+    cards.forEach( function ( c ) {
+      c.addEventListener( 'click', function () {
+        var m = c.getAttribute( 'data-m' );
+        cards.forEach( function ( x ) { x.classList.remove( 'active' ); } );
+        panels.forEach( function ( x ) { x.classList.remove( 'active' ); } );
+        c.classList.add( 'active' );
+        var panel = document.querySelector( '[data-panel="' + m + '"]' );
+        if ( panel ) panel.classList.add( 'active' );
+        pay.textContent = labels[ m ] || labels.card;
+      } );
+    } );
+
+    [ '.bnpl-card', '.crypto-chip', '.bank-card', '.p2p-card' ].forEach( function ( sel ) {
+      document.querySelectorAll( sel ).forEach( function ( el ) {
+        el.addEventListener( 'click', function () {
+          document.querySelectorAll( sel ).forEach( function ( x ) { x.classList.remove( 'active' ); } );
+          el.classList.add( 'active' );
+        } );
+      } );
+    } );
+  } )();
+</script>
+
+</body>
+</html>

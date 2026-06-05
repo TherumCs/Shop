@@ -1,0 +1,272 @@
+/**
+ * Shop by Therum — Studio checkout styles.
+ *
+ * Distilled from checkout-experience.html. The method strip + grouped
+ * pills + sliding panels are the visible Studio Pay identity.
+ */
+
+.shop-checkout--studio {
+	--ac: #e83b3b; --ac-h: #c92e2e; --ac-s: rgba(232, 59, 59, .08);
+	--sf: #fff; --sf2: #f7f7f6;
+	--bd: rgba(0, 0, 0, .08); --bd2: rgba(0, 0, 0, .16);
+	--tx: #0a0a0a; --tx2: #666; --tx3: #999;
+	--ok: #10b981;
+	--f: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+	--mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+	--r: 10px; --r-lg: 14px;
+	--e: .22s cubic-bezier(.22,.61,.36,1);
+	font: 14px/1.5 var(--f); color: var(--tx);
+}
+.shop-checkout__layout {
+	max-width: 1200px; margin: 0 auto; padding: 32px;
+	display: grid; grid-template-columns: 1fr 360px; gap: 32px;
+}
+@media (max-width: 920px) {
+	.shop-checkout__layout { grid-template-columns: 1fr; }
+	.shop-checkout__summary { order: -1; }
+}
+
+/* Sections */
+.shop-checkout__section {
+	background: var(--sf); border: 1px solid var(--bd);
+	border-radius: var(--r-lg); padding: 24px 28px; margin-bottom: 14px;
+}
+.shop-checkout__section-head {
+	display: flex; align-items: center; justify-content: space-between;
+	margin-bottom: 18px;
+}
+.shop-checkout__section-head h2 {
+	margin: 0; font: 700 15px var(--f);
+	display: flex; align-items: center; gap: 10px;
+}
+.shop-checkout__section-num {
+	width: 22px; height: 22px; border-radius: 50%;
+	background: var(--sf2); color: var(--tx3);
+	display: inline-flex; align-items: center; justify-content: center;
+	font: 700 11px var(--f);
+}
+.shop-checkout__section-status {
+	font: 600 11px var(--mono); letter-spacing: .04em;
+	text-transform: uppercase; color: var(--tx3);
+}
+
+/* Form */
+.shop-checkout__row {
+	display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;
+}
+.shop-checkout__row--1 { grid-template-columns: 1fr; }
+.shop-checkout__row--3 { grid-template-columns: 1fr 1fr 1fr; }
+.shop-checkout__row label { display: flex; flex-direction: column; gap: 5px; font: 600 11px var(--f); color: var(--tx2); }
+.shop-checkout__input {
+	height: 40px; padding: 0 12px;
+	background: var(--sf2); border: 1px solid transparent; border-radius: var(--r);
+	font: 14px var(--f); color: var(--tx);
+	transition: border-color var(--e), background var(--e), box-shadow var(--e);
+}
+.shop-checkout__input:focus {
+	outline: 0; border-color: var(--ac); background: var(--sf);
+	box-shadow: 0 0 0 4px var(--ac-s);
+}
+
+/* Shipping */
+.shop-checkout__ship-list { display: flex; flex-direction: column; gap: 8px; }
+.shop-checkout__ship-row {
+	display: flex; align-items: center; justify-content: space-between; gap: 12px;
+	padding: 12px 14px;
+	background: var(--sf2); border: 1.5px solid transparent; border-radius: var(--r);
+	cursor: pointer;
+}
+.shop-checkout__ship-row.is-active { border-color: var(--ac); background: var(--ac-s); }
+.shop-checkout__ship-name { font: 600 13px var(--f); }
+.shop-checkout__ship-sub  { font: 11px var(--f); color: var(--tx3); }
+.shop-checkout__ship-price { font: 700 13px var(--mono); font-variant-numeric: tabular-nums; }
+
+/* Method strip */
+.shop-checkout__methods {
+	display: flex; gap: 6px;
+	margin: 0 -2px 18px; padding: 4px;
+	background: var(--sf2); border-radius: var(--r);
+	overflow-x: auto; scrollbar-width: none;
+}
+.shop-checkout__methods::-webkit-scrollbar { display: none; }
+.shop-checkout__methods-loading,
+.shop-checkout__methods-empty {
+	padding: 18px; font: 500 12px var(--mono); color: var(--tx3); text-align: center;
+}
+.shop-checkout__method-pill {
+	display: inline-flex; align-items: center; gap: 8px;
+	padding: 9px 14px;
+	background: transparent; border: 0; border-radius: 8px;
+	font: 600 12px var(--f); color: var(--tx2);
+	cursor: pointer; white-space: nowrap;
+	transition: all var(--e);
+}
+.shop-checkout__method-pill:hover { background: rgba(255,255,255,.6); color: var(--tx); }
+.shop-checkout__method-pill.is-active {
+	background: var(--sf); color: var(--tx);
+	box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 0 0 1px var(--bd);
+}
+.shop-checkout__pill-ico {
+	width: 18px; height: 18px; border-radius: 5px;
+	display: inline-flex; align-items: center; justify-content: center;
+	font: 700 10px var(--f); color: #fff;
+}
+.shop-checkout__pill-ico[data-group-ico="card"]    { background: #1a1a1a; }
+.shop-checkout__pill-ico[data-group-ico="wallets"] { background: #000; }
+.shop-checkout__pill-ico[data-group-ico="bnpl"]    { background: #ffa8b8; color: #000; }
+.shop-checkout__pill-ico[data-group-ico="bank"]    { background: #10b981; }
+.shop-checkout__pill-ico[data-group-ico="crypto"]  { background: #f7931a; }
+.shop-checkout__pill-ico[data-group-ico="p2p"]     { background: #00d632; }
+
+/* Panels */
+.shop-checkout__panels > * { animation: shop-panel-in .28s var(--e); }
+@keyframes shop-panel-in {
+	from { opacity: 0; transform: translateY(6px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Wallets */
+.shop-checkout__wallet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.shop-checkout__wallet {
+	height: 48px; border: 0; border-radius: var(--r);
+	font: 600 14px var(--f); cursor: pointer;
+}
+.shop-checkout__wallet--apple_pay  { background: #000; color: #fff; }
+.shop-checkout__wallet--google_pay { background: #fff; color: #1a1a1a; border: 1px solid var(--bd2); }
+.shop-checkout__wallet--paypal     { background: #fff; color: #003087; border: 1px solid var(--bd2); font-weight: 800; font-style: italic; grid-column: span 2; }
+.shop-checkout__wallet--shop_pay   { background: #5a31f4; color: #fff; grid-column: span 2; }
+.shop-checkout__wallet--link       { background: #00d66f; color: #000; }
+
+/* BNPL */
+.shop-checkout__bnpl-list { display: flex; flex-direction: column; gap: 8px; }
+.shop-checkout__bnpl-card {
+	display: flex; align-items: center; gap: 12px;
+	padding: 14px 16px;
+	background: var(--sf2); border: 1.5px solid transparent; border-radius: var(--r);
+	text-align: left; cursor: pointer; width: 100%;
+}
+.shop-checkout__bnpl-card.is-active { border-color: var(--ac); background: var(--ac-s); }
+.shop-checkout__bnpl-logo {
+	width: 56px; height: 28px; border-radius: 5px;
+	display: flex; align-items: center; justify-content: center;
+	font: 700 11px var(--f); flex-shrink: 0;
+}
+.shop-checkout__bnpl-logo--klarna   { background: #ffa8b8; color: #000; }
+.shop-checkout__bnpl-logo--affirm   { background: #060809; color: #fff; }
+.shop-checkout__bnpl-logo--afterpay { background: #b2fce4; color: #000; }
+.shop-checkout__bnpl-logo--sezzle   { background: #fffd6d; color: #000; }
+.shop-checkout__bnpl-logo--zip      { background: #aa8fff; color: #fff; }
+.shop-checkout__bnpl-logo--paypal_credit { background: #003087; color: #fff; font-size: 9px; }
+.shop-checkout__bnpl-name { font: 700 13px var(--f); flex: 1; }
+.shop-checkout__chev { color: var(--tx3); font-size: 16px; }
+
+/* Bank */
+.shop-checkout__bank {
+	display: flex; align-items: center; gap: 14px; width: 100%;
+	padding: 14px;
+	background: var(--ac-s); border: 1.5px solid var(--ac); border-radius: var(--r);
+	cursor: pointer; text-align: left;
+}
+.shop-checkout__bank-ico {
+	width: 40px; height: 40px; border-radius: 8px;
+	background: #10b981; color: #fff;
+	display: flex; align-items: center; justify-content: center;
+	font: 700 14px var(--f);
+}
+.shop-checkout__bank-name { font: 700 13px var(--f); }
+.shop-checkout__bank-sub  { font: 11px var(--f); color: var(--tx3); margin-top: 2px; }
+
+/* Crypto */
+.shop-checkout__crypto-grid {
+	display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 12px;
+}
+@media (max-width: 540px) { .shop-checkout__crypto-grid { grid-template-columns: repeat(3, 1fr); } }
+.shop-checkout__crypto-chip {
+	display: flex; flex-direction: column; align-items: center; gap: 4px;
+	padding: 12px 8px;
+	background: var(--sf2); border: 1.5px solid transparent; border-radius: var(--r);
+	cursor: pointer;
+}
+.shop-checkout__crypto-chip.is-active { border-color: var(--ac); background: var(--ac-s); }
+.shop-checkout__crypto-sym {
+	width: 30px; height: 30px; border-radius: 50%;
+	display: flex; align-items: center; justify-content: center;
+	font: 700 11px var(--f); color: #fff;
+}
+.shop-checkout__crypto-sym--btc  { background: #f7931a; }
+.shop-checkout__crypto-sym--eth  { background: #627eea; }
+.shop-checkout__crypto-sym--usdc { background: #2775ca; }
+.shop-checkout__crypto-sym--usdt { background: #26a17b; }
+.shop-checkout__crypto-sym--sol  { background: linear-gradient(135deg, #9945ff, #14f195); }
+.shop-checkout__crypto-sym--xrp  { background: #23292f; }
+.shop-checkout__crypto-label { font: 600 11px var(--f); color: var(--tx2); }
+.shop-checkout__note {
+	font: 11px var(--f); color: var(--tx3);
+	padding: 10px; background: var(--sf2); border-radius: var(--r); text-align: center;
+}
+
+/* P2P */
+.shop-checkout__p2p-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.shop-checkout__p2p {
+	height: 56px; border: 0; border-radius: var(--r);
+	font: 700 14px var(--f); cursor: pointer;
+}
+.shop-checkout__p2p--cashapp { background: #00d632; color: #000; }
+.shop-checkout__p2p--venmo   { background: #3d95ce; color: #fff; }
+.shop-checkout__p2p--zelle   { background: #6d1ed4; color: #fff; }
+
+/* Summary */
+.shop-checkout__summary {
+	background: var(--sf); border: 1px solid var(--bd);
+	border-radius: var(--r-lg); padding: 24px 26px;
+	position: sticky; top: 24px; height: max-content;
+}
+.shop-checkout__summary h3 {
+	margin: 0 0 16px; font: 700 13px var(--f);
+	letter-spacing: .06em; text-transform: uppercase; color: var(--tx3);
+}
+.shop-checkout__line-items { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+.shop-checkout__line-item { display: flex; gap: 12px; align-items: center; }
+.shop-checkout__li-img {
+	width: 48px; height: 48px; border-radius: 8px;
+	background: var(--sf2); position: relative;
+	display: flex; align-items: center; justify-content: center;
+	font: 700 13px var(--f); color: var(--tx2);
+	flex-shrink: 0;
+}
+.shop-checkout__li-qty {
+	position: absolute; top: -5px; right: -5px;
+	width: 18px; height: 18px; border-radius: 50%;
+	background: var(--tx); color: #fff;
+	display: flex; align-items: center; justify-content: center;
+	font: 700 10px var(--f);
+}
+.shop-checkout__li-name { font: 500 13px var(--f); line-height: 1.3; }
+.shop-checkout__li-meta { font: 11px var(--f); color: var(--tx3); }
+.shop-checkout__li-price { font: 700 13px var(--mono); font-variant-numeric: tabular-nums; }
+.shop-checkout__totals { border-top: 1px solid var(--bd); padding-top: 14px; }
+.shop-checkout__totals-row {
+	display: flex; justify-content: space-between;
+	font: 13px var(--f); color: var(--tx2); margin-bottom: 8px;
+	font-variant-numeric: tabular-nums;
+}
+.shop-checkout__totals-row--total {
+	color: var(--tx); font-weight: 700; font-size: 16px;
+	margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--bd);
+}
+.shop-checkout__pay {
+	display: flex; align-items: center; justify-content: center;
+	width: 100%; height: 52px; margin-top: 18px;
+	background: var(--ac); color: #fff;
+	border: 0; border-radius: var(--r);
+	font: 700 15px var(--f); cursor: pointer;
+	font-variant-numeric: tabular-nums;
+	transition: background var(--e), transform var(--e), box-shadow var(--e);
+}
+.shop-checkout__pay:hover { background: var(--ac-h); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(232,59,59,.22); }
+.shop-checkout__pay:disabled { opacity: .6; cursor: default; transform: none; }
+.shop-checkout__security {
+	text-align: center; font: 11px var(--f); color: var(--tx3);
+	margin-top: 10px;
+	display: flex; align-items: center; justify-content: center; gap: 6px;
+}

@@ -1,0 +1,24 @@
+# OS junk
+.DS_Store
+Thumbs.db
+*~
+.idea/
+.vscode/
+
+# Local dev
+node_modules/
+vendor/
+*.log
+.env
+.env.local
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Build artifacts (we use no build step, but just in case)
+build/
+dist/
+.cache/
+
+# WP-internal that could appear if symlinked into a site
+wp-content/

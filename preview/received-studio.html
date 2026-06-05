@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Studio · Received</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --ac:#e83b3b;--ac-h:#c92e2e;--ac-s:rgba(232,59,59,0.08);
+    --sf:#fff;--sf2:#f7f7f6;--sf3:#fafaf9;
+    --bd:rgba(0,0,0,0.08);--bd2:rgba(0,0,0,0.16);
+    --bg:#f4f3f0;--tx:#0a0a0a;--tx2:#666;--tx3:#999;--ok:#10b981;
+    --f:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+    --r:10px;--r-lg:14px;--e:0.22s cubic-bezier(0.22,0.61,0.36,1);
+  }
+  *{box-sizing:border-box}html,body{margin:0;padding:0}
+  body{font:14px/1.5 var(--f);color:var(--tx);background:var(--bg);background-image:radial-gradient(ellipse 1200px 600px at 100% 0%,rgba(232,59,59,0.04),transparent 60%);min-height:100vh}
+
+  .storefront{filter:blur(2px);opacity:.5;pointer-events:none;padding:32px}
+  .storefront h2{margin:0 0 16px}
+  .sf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:1100px;margin:0 auto}
+  .sf-card{aspect-ratio:4/5;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-size:56px}
+
+  /* Drawer (open, showing received) */
+  .drawer{position:fixed;inset:0;z-index:9000}
+  .drawer__backdrop{position:absolute;inset:0;background:rgba(10,10,10,.42);backdrop-filter:blur(2px)}
+  .drawer__panel{position:absolute;top:0;right:0;height:100%;width:100%;max-width:460px;background:var(--sf);box-shadow:-24px 0 60px rgba(0,0,0,.08);display:flex;flex-direction:column}
+
+  .drawer__header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--bd)}
+  .drawer__step{display:inline-flex;align-items:center;gap:6px;font:600 12px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--tx3)}
+  .drawer__step b{color:var(--ok);font-family:var(--f);text-transform:none;letter-spacing:-.005em;font-weight:700;font-size:14px}
+  .drawer__close{border:0;background:transparent;font-size:22px;color:var(--tx3);cursor:pointer;padding:.25rem .5rem;border-radius:var(--r)}
+
+  .drawer__body{flex:1;overflow-y:auto;padding:28px 24px;text-align:center}
+
+  .check-circle{
+    width:88px;height:88px;border-radius:50%;
+    background:var(--ac-s);color:var(--ac);
+    display:inline-flex;align-items:center;justify-content:center;
+    margin-bottom:22px;animation:pop .5s var(--e);
+  }
+  @keyframes pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}
+  .check-circle svg{width:42px;height:42px}
+
+  .eyebrow{font:700 11px var(--mono);color:var(--ok);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+  .title{margin:0 0 6px;font-size:24px;font-weight:700;letter-spacing:-.015em;line-height:1.2}
+  .sub{margin:0 0 24px;color:var(--tx2);font-size:13px}
+  .sub b{color:var(--tx);font-weight:600}
+  .sub .num{font-family:var(--mono);font-weight:700;letter-spacing:.04em}
+
+  .summary{
+    text-align:left;background:var(--sf2);border-radius:var(--r-lg);
+    padding:18px 20px;margin-bottom:18px;
+  }
+  .summary__head{display:flex;justify-content:space-between;margin-bottom:12px}
+  .summary__head h3{margin:0;font:700 11px var(--mono);color:var(--tx3);letter-spacing:.12em;text-transform:uppercase}
+  .summary__head span{font:500 11px var(--mono);color:var(--tx3)}
+
+  .item{display:grid;grid-template-columns:48px 1fr auto;column-gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--bd)}
+  .item:first-of-type{border-top:0;padding-top:2px}
+  .item__img{width:48px;height:48px;border-radius:10px;background:var(--sf);display:flex;align-items:center;justify-content:center;font-size:22px;position:relative}
+  .item__qty{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:50%;background:var(--tx);color:#fff;font:700 10px var(--mono);display:inline-flex;align-items:center;justify-content:center}
+  .item__info{min-width:0}
+  .item__title{font-size:12px;font-weight:700}
+  .item__meta{font-size:10px;color:var(--tx3);margin-top:1px}
+  .item__price{font:700 12px var(--mono);font-variant-numeric:tabular-nums}
+
+  .totals{margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}
+  .totals-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;color:var(--tx2);font-variant-numeric:tabular-nums}
+  .totals-row>span:last-child{font-family:var(--mono);color:var(--tx)}
+  .totals-row--total{margin-top:6px;padding-top:8px;border-top:1px solid var(--bd);color:var(--tx);font-size:14px;font-weight:700}
+
+  .next{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+  .next-tile{background:var(--sf2);border-radius:var(--r);padding:12px;text-align:left}
+  .next-tile__title{font-size:11px;font-weight:700;color:var(--tx)}
+  .next-tile__sub{font-size:10px;color:var(--tx3);margin-top:2px;line-height:1.35}
+
+  .actions{display:flex;gap:8px}
+  .btn{flex:1;height:46px;border:0;border-radius:var(--r);cursor:pointer;font:700 13px var(--f);transition:background var(--e),transform var(--e)}
+  .btn--primary{background:var(--ac);color:#fff}
+  .btn--primary:hover{background:var(--ac-h);transform:translateY(-1px)}
+  .btn--ghost{background:var(--sf);color:var(--tx);border:1px solid var(--bd)}
+  .btn--ghost:hover{background:var(--sf2)}
+</style>
+</head>
+<body>
+
+<!-- Background storefront -->
+<section class="storefront">
+  <div class="sf-grid">
+    <div class="sf-card">🟥</div><div class="sf-card">🧥</div><div class="sf-card">🧢</div><div class="sf-card">🏷️</div>
+    <div class="sf-card">👕</div><div class="sf-card">🥾</div><div class="sf-card">🎒</div><div class="sf-card">🧦</div>
+  </div>
+</section>
+
+<!-- Drawer received -->
+<div class="drawer">
+  <div class="drawer__backdrop"></div>
+  <aside class="drawer__panel">
+    <header class="drawer__header">
+      <div class="drawer__step">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ok)"><polyline points="20 6 9 17 4 12"/></svg>
+        <b>Order confirmed</b>
+      </div>
+      <button class="drawer__close">×</button>
+    </header>
+
+    <div class="drawer__body">
+      <div class="check-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <div class="eyebrow">Payment received</div>
+      <h1 class="title">Thanks — your order is in</h1>
+      <p class="sub">Order <span class="num">SH-20260604-A1B2C3</span><br>Receipt sent to <b>jenny@example.com</b></p>
+
+      <div class="summary">
+        <div class="summary__head"><h3>Items</h3><span>3 items · USD</span></div>
+        <div class="item">
+          <div class="item__img" style="background:#1a1a1a;color:#fff">🟥<span class="item__qty">1</span></div>
+          <div class="item__info"><div class="item__title">Therum Studio Tee</div><div class="item__meta">Therum · Red · Large</div></div>
+          <div class="item__price">$29.00</div>
+        </div>
+        <div class="item">
+          <div class="item__img" style="background:#2a2a2a;color:#fff">🧥<span class="item__qty">2</span></div>
+          <div class="item__info"><div class="item__title">Heavyweight Hoodie</div><div class="item__meta">Printful · Black · Medium</div></div>
+          <div class="item__price">$137.60</div>
+        </div>
+        <div class="item">
+          <div class="item__img" style="background:#627eea;color:#fff">🧢<span class="item__qty">1</span></div>
+          <div class="item__info"><div class="item__title">Patch Cap</div><div class="item__meta">Prod Partner · Ocean · One size</div></div>
+          <div class="item__price">$24.00</div>
+        </div>
+        <div class="totals">
+          <div class="totals-row"><span>Subtotal</span><span>$190.60</span></div>
+          <div class="totals-row"><span>Tax</span><span>$16.68</span></div>
+          <div class="totals-row totals-row--total"><span>Total paid</span><span>$207.28</span></div>
+        </div>
+      </div>
+
+      <div class="next">
+        <div class="next-tile">
+          <div class="next-tile__title">📦 Fulfillment</div>
+          <div class="next-tile__sub">Vendors notified. Tracking arrives by email.</div>
+        </div>
+        <div class="next-tile">
+          <div class="next-tile__title">✉ Receipt sent</div>
+          <div class="next-tile__sub">Check spam, just in case.</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn--ghost">View order</button>
+        <button class="btn btn--primary">Keep shopping</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+</body>
+</html>
