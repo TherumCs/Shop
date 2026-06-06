@@ -649,8 +649,15 @@ add_action( 'wp_enqueue_scripts', function (): void {
 	wp_enqueue_style(  'counter-elements' );
 	wp_enqueue_script( 'counter-elements' );
 
-	// Studio checkout assets — only when the page contains the Studio
-	// pattern (cheap heuristic: presentation option matches).
+	// Studio cart + checkout assets — only when the page contains the Studio
+	// pattern (cheap heuristic: presentation option matches). Studio cart is
+	// also used by Atelier mode.
+	$cart_mode = (string) get_option( 'counter_cart_presentation', 'studio' );
+	if ( $cart_mode === 'studio' || $cart_mode === 'atelier' ) {
+		wp_register_style(  'counter-cart-studio', COUNTER_URL . 'assets/cart/studio.css', [], COUNTER_VERSION );
+		wp_enqueue_style(  'counter-cart-studio' );
+	}
+
 	if ( get_option( 'counter_checkout_presentation' ) === 'studio' ) {
 		wp_register_style(  'counter-checkout-studio', COUNTER_URL . 'assets/checkout/studio.css', [], COUNTER_VERSION );
 		wp_register_script( 'counter-checkout-studio', COUNTER_URL . 'assets/checkout/studio.js',  [], COUNTER_VERSION, [ 'in_footer' => true, 'strategy' => 'defer' ] );

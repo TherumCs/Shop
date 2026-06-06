@@ -45,7 +45,16 @@ $products = \Counter\Container::instance()->get( \Counter\Repositories\ProductRe
 			?>
 				<li class="counter-studio__line" data-counter-cart-item data-counter-cart-item-id="<?php echo esc_attr( (string) $item->id ); ?>">
 					<div class="counter-studio__line-image" aria-hidden="true">
-						<?php /* TODO: render <img> when product->primaryImageId is wired in admin UI */ ?>
+						<?php
+						$image_id = $product?->primaryImageId;
+						if ( $image_id && function_exists( 'wp_get_attachment_image' ) ) {
+							echo wp_get_attachment_image( $image_id, [ 64, 64 ], false, [
+								'class'   => 'counter-studio__line-img',
+								'loading' => 'lazy',
+								'alt'     => $title,
+							] );
+						}
+						?>
 					</div>
 					<div class="counter-studio__line-info">
 						<div class="counter-studio__line-title"><?php echo esc_html( $title ); ?></div>
