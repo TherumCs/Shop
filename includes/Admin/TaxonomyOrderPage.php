@@ -1,0 +1,175 @@
+<?php
+/**
+ * Counter by Therum — Taxonomy ordering admin page.
+ *
+ * Base class for drag-drop term reordering pages. Subclassed for
+ * categories, variants, custom taxonomies.
+ */
+
+namespace Counter\Admin;
+
+use Counter\Repositories\TaxonomyOrderRepository;
+
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+abstract class TaxonomyOrderPage {
+
+	public function __construct(
+		protected readonly TaxonomyOrderRepository $orders,
+	) {}
+
+	/**
+	 * Return the taxonomy slug (e.g., 'product_categories', 'vendors').
+	 */
+	abstract protected function getTaxonomy(): string;
+
+	/**
+	 * Return the page title (e.g., 'Product Categories').
+	 */
+	abstract protected function getPageTitle(): string;
+
+	/**
+	 * Return the description shown at the top of the page.
+	 */
+	abstract protected function getDescription(): string;
+
+	/**
+	 * Fetch all available terms for this taxonomy.
+	 * Should return array of [ 'id' => int, 'name' => string, ...extra fields ].
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	abstract protected function getTerms(): array;
+
+	/**
+	 * Render the admin page.
+	 */
+	public function render(): void {
+		$taxonomy = $this->getTaxonomy();
+		$terms = $this->getTerms();
+		$ordering = $this->orders->getTree( $taxonomy );
+
+		// Build a map for quick lookups
+		$orderMap = [];
+		foreach ( $ordering as $order ) {
+			$orderMap[ $order->termId ] = $order;
+		}
+
+		// Build hierarchical tree
+		$tree = $this->buildTree( $terms, $orderMap );
+
+		?>
+		<div class="wrap counter-taxonomy-order">
+			<h1><?php echo esc_html( $this->getPageTitle() ); ?></h1>
+			<p class="description"><?php echo esc_html( $this->getDescription() ); ?></p>
+
+			<div class="counter-taxonomy-order__controls">
+				<button type="button" class="button button-primary" id="counter-save-order">
+					<?php esc_html_e( 'Save Order', 'counter' ); ?>
+				</button>
+				<span class="spinner" id="counter-order-spinner"></span>
+				<span id="counter-order-message" class="counter-order-message"></span>
+			</div>
+
+			<div class="counter-taxonomy-order__tree">
+				<ul id="counter-taxonomy-tree" class="counter-taxonomy-tree sortable-list">
+					<?php $this->renderTree( $tree, $orderMap ); ?>
+				</ul>
+			</div>
+		</div>
+
+		<script>
+		window.CounterTaxonomyOrderConfig = {
+			taxonomy: <?php echo wp_json_encode( $taxonomy ); ?>,
+			restUrl: <?php echo wp_json_encode( rest_url() ); ?>,
+			nonce: <?php echo wp_json_encode( wp_create_nonce( 'wp_rest' ) ); ?>,
+		};
+		</script>
+		<?php
+	}
+
+	/**
+	 * Build hierarchical tree from flat terms and ordering.
+	 *
+	 * @param array<int, array<string, mixed>> $terms
+	 * @param array<int, \Counter\Models\TaxonomyOrder> $orderMap
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function buildTree( array $terms, array $orderMap ): array {
+		$byParent = [ null => [] ];
+
+		// First pass: organize by parent
+		foreach ( $terms as $term ) {
+			$order = $orderMap[ $term['id'] ] ?? null;
+			$parentId = $order?->parentId;
+
+			if ( ! isset( $byParent[ $parentId ] ) ) {
+				$byParent[ $parentId ] = [];
+			}
+
+			$byParent[ $parentId ][] = [
+				'term'  => $term,
+				'order' => $order,
+			];
+		}
+
+		// Sort each parent's children by position
+		foreach ( $byParent as &$group ) {
+			usort( $group, fn( $a, $b ) =>
+				( $a['order']?->position ?? 0 ) <=> ( $b['order']?->position ?? 0 )
+			);
+		}
+
+		return $byParent[ null ] ?? [];
+	}
+
+	/**
+	 * Recursively render the tree as nested lists.
+	 *
+	 * @param array<int, array<string, mixed>> $items
+	 * @param array<int, \Counter\Models\TaxonomyOrder> $orderMap
+	 */
+	private function renderTree( array $items, array $orderMap, int $depth = 0 ): void {
+		foreach ( $items as $item ) {
+			$term = $item['term'];
+			$order = $item['order'];
+			$termId = (int) $term['id'];
+
+			?>
+			<li class="counter-taxonomy-item" data-term-id="<?php echo esc_attr( (string) $termId ); ?>">
+				<div class="counter-taxonomy-item__drag-handle">
+					<span class="dashicons dashicons-menu"></span>
+				</div>
+				<div class="counter-taxonomy-item__info">
+					<?php echo esc_html( $term['name'] ?? 'Untitled' ); ?>
+					<span class="counter-taxonomy-item__id">#<?php echo esc_html( (string) $termId ); ?></span>
+				</div>
+
+				<?php
+				// Render children if any
+				$children = [];
+				if ( isset( $orderMap ) ) {
+					foreach ( $orderMap as $o ) {
+						if ( $o->parentId === $termId ) {
+							// Find the term
+							$childTerms = array_filter( array( $term ), fn( $t ) => $t['id'] !== $termId );
+							if ( $childTerms ) {
+								$children[] = [ 'term' => current( $childTerms ), 'order' => $o ];
+							}
+						}
+					}
+				}
+
+				if ( $children ) {
+					?>
+					<ul class="counter-taxonomy-item__children">
+						<?php $this->renderTree( $children, $orderMap, $depth + 1 ); ?>
+					</ul>
+					<?php
+				}
+				?>
+			</li>
+			<?php
+		}
+	}
+}

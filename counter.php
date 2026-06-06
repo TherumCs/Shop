@@ -535,6 +535,21 @@ function counter_register_container_bindings(): void {
 	$c->singleton( \Counter\Admin\CustomersPage::class, fn() => new \Counter\Admin\CustomersPage() );
 	$c->singleton( \Counter\Admin\OrderIoPage::class,   fn() => new \Counter\Admin\OrderIoPage() );
 	$c->singleton( \Counter\Admin\UpdatesPage::class,   fn() => new \Counter\Admin\UpdatesPage() );
+	$c->singleton( \Counter\Admin\ProductCategoryOrderPage::class, fn( $c ) =>
+		new \Counter\Admin\ProductCategoryOrderPage(
+			$c->get( \Counter\Repositories\TaxonomyOrderRepository::class )
+		)
+	);
+	$c->singleton( \Counter\Admin\ProductVariantOrderPage::class, fn( $c ) =>
+		new \Counter\Admin\ProductVariantOrderPage(
+			$c->get( \Counter\Repositories\TaxonomyOrderRepository::class )
+		)
+	);
+	$c->singleton( \Counter\Admin\CustomTaxonomyOrderPage::class, fn( $c ) =>
+		new \Counter\Admin\CustomTaxonomyOrderPage(
+			$c->get( \Counter\Repositories\TaxonomyOrderRepository::class )
+		)
+	);
 	$c->singleton( \Counter\Services\Updater::class,    fn() => new \Counter\Services\Updater() );
 	$c->singleton( \Counter\Rest\UpdaterController::class, fn( $c ) =>
 		new \Counter\Rest\UpdaterController( $c->get( \Counter\Services\Updater::class ) )
@@ -550,6 +565,9 @@ function counter_register_container_bindings(): void {
 			$c->get( \Counter\Admin\CustomersPage::class ),
 			$c->get( \Counter\Admin\OrderIoPage::class ),
 			$c->get( \Counter\Admin\UpdatesPage::class ),
+			$c->get( \Counter\Admin\ProductCategoryOrderPage::class ),
+			$c->get( \Counter\Admin\ProductVariantOrderPage::class ),
+			$c->get( \Counter\Admin\CustomTaxonomyOrderPage::class ),
 		)
 	);
 

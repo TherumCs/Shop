@@ -1,0 +1,216 @@
+/**
+ * Counter by Therum — Taxonomy ordering styles.
+ *
+ * Drag-drop interface for reordering product categories, variants, taxonomies.
+ */
+
+.counter-taxonomy-order {
+	max-width: 800px;
+	margin-top: 20px;
+}
+
+.counter-taxonomy-order__tabs {
+	display: flex;
+	gap: 0;
+	margin: 20px 0 30px;
+	border-bottom: 1px solid #ccc;
+}
+
+.counter-taxonomy-order__tabs .nav-tab {
+	padding: 10px 15px;
+	text-decoration: none;
+	color: #0073aa;
+	border: none;
+	border-bottom: 3px solid transparent;
+	background: none;
+	cursor: pointer;
+	font-weight: 500;
+	transition: all 0.2s;
+}
+
+.counter-taxonomy-order__tabs .nav-tab:hover {
+	color: #005a87;
+}
+
+.counter-taxonomy-order__tabs .nav-tab-active {
+	color: #000;
+	border-bottom-color: #0073aa;
+}
+
+.counter-taxonomy-order__controls {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 20px;
+	padding: 12px 16px;
+	background: #f5f5f5;
+	border-radius: 4px;
+}
+
+.counter-taxonomy-order__controls button {
+	margin: 0;
+}
+
+.counter-order-spinner {
+	display: none;
+	width: 16px;
+	height: 16px;
+	border: 2px solid #f3f3f3;
+	border-top: 2px solid #0073aa;
+	border-radius: 50%;
+	animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+	to { transform: rotate(360deg); }
+}
+
+.counter-order-message {
+	margin: 0;
+	padding: 0;
+	font-size: 13px;
+	color: #666;
+}
+
+.counter-order-message--success {
+	color: #10b981;
+	font-weight: 500;
+}
+
+.counter-order-message--error {
+	color: #dc2626;
+	font-weight: 500;
+}
+
+/* Tree structure */
+.counter-taxonomy-tree {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.counter-taxonomy-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 16px;
+	background: #fff;
+	border: 1px solid #e5e5e5;
+	border-radius: 4px;
+	margin-bottom: 8px;
+	position: relative;
+	transition: all 0.15s;
+}
+
+.counter-taxonomy-item:hover {
+	background: #fafafa;
+	border-color: #ccc;
+}
+
+.counter-taxonomy-item--dragging {
+	opacity: 0.5;
+	background: #f0f0f0;
+}
+
+.counter-taxonomy-item--drag {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	z-index: 1000;
+}
+
+.counter-taxonomy-item__drag-handle {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	cursor: grab;
+	color: #999;
+	transition: color 0.15s;
+}
+
+.counter-taxonomy-item__drag-handle:hover {
+	color: #666;
+}
+
+.counter-taxonomy-item--dragging .counter-taxonomy-item__drag-handle {
+	cursor: grabbing;
+	color: #0073aa;
+}
+
+.counter-taxonomy-item__info {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 14px;
+	color: #333;
+	min-width: 0;
+}
+
+.counter-taxonomy-item__id {
+	flex-shrink: 0;
+	font-size: 12px;
+	color: #999;
+}
+
+/* Nested items (children) */
+.counter-taxonomy-item__children {
+	margin: 8px 0 0 32px;
+	padding: 0;
+	list-style: none;
+	border-left: 2px solid #e5e5e5;
+	padding-left: 16px;
+}
+
+.counter-taxonomy-item__children > .counter-taxonomy-item {
+	margin-bottom: 6px;
+	padding: 10px 12px;
+	font-size: 13px;
+	background: #f9f9f9;
+	border-color: #f0f0f0;
+}
+
+.counter-taxonomy-item__children > .counter-taxonomy-item:hover {
+	background: #f5f5f5;
+	border-color: #e5e5e5;
+}
+
+/* Empty state */
+.counter-taxonomy-order__tree:empty {
+	padding: 40px 20px;
+	text-align: center;
+	color: #999;
+	border: 2px dashed #e5e5e5;
+	border-radius: 4px;
+}
+
+.counter-taxonomy-order__tree:empty::after {
+	content: 'No items to order. Create some first!';
+}
+
+/* Accessibility */
+.counter-taxonomy-item__drag-handle:focus-visible {
+	outline: 2px solid #0073aa;
+	outline-offset: 2px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+	.counter-taxonomy-item {
+		padding: 10px 12px;
+	}
+
+	.counter-taxonomy-item__info {
+		font-size: 13px;
+	}
+
+	.counter-taxonomy-order__controls {
+		flex-wrap: wrap;
+	}
+
+	.counter-taxonomy-order__controls button {
+		flex: 1;
+		min-width: 120px;
+	}
+}

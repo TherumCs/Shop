@@ -19,15 +19,18 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 final class AdminMenu {
 
 	public function __construct(
-		private readonly SettingsPage     $settings,
-		private readonly ImporterPage     $importer,
-		private readonly ProductsPage     $products,
-		private readonly OrdersPage       $orders,
-		private readonly BuilderPage      $builder,
-		private readonly StudioPayPage    $studioPay,
-		private readonly CustomersPage    $customers,
-		private readonly OrderIoPage      $orderIo,
-		private readonly UpdatesPage      $updates,
+		private readonly SettingsPage               $settings,
+		private readonly ImporterPage               $importer,
+		private readonly ProductsPage               $products,
+		private readonly OrdersPage                 $orders,
+		private readonly BuilderPage                $builder,
+		private readonly StudioPayPage              $studioPay,
+		private readonly CustomersPage              $customers,
+		private readonly OrderIoPage                $orderIo,
+		private readonly UpdatesPage                $updates,
+		private readonly ProductCategoryOrderPage   $categoryOrder,
+		private readonly ProductVariantOrderPage    $variantOrder,
+		private readonly CustomTaxonomyOrderPage    $taxonomyOrder,
 	) {}
 
 	public function register(): void {
@@ -115,6 +118,34 @@ final class AdminMenu {
 			capability:  'manage_options',
 			menu_slug:   'counter-updates',
 			callback:    [ $this->updates, 'render' ],
+		);
+
+		// Taxonomy ordering — manage term display order hierarchically.
+		add_submenu_page(
+			parent_slug: 'counter',
+			page_title:  __( 'Category Order', 'counter' ),
+			menu_title:  __( 'Category Order', 'counter' ),
+			capability:  'manage_woocommerce',
+			menu_slug:   'counter-categories-order',
+			callback:    [ $this->categoryOrder, 'render' ],
+		);
+
+		add_submenu_page(
+			parent_slug: 'counter',
+			page_title:  __( 'Variant Order', 'counter' ),
+			menu_title:  __( 'Variant Order', 'counter' ),
+			capability:  'manage_woocommerce',
+			menu_slug:   'counter-variants-order',
+			callback:    [ $this->variantOrder, 'render' ],
+		);
+
+		add_submenu_page(
+			parent_slug: 'counter',
+			page_title:  __( 'Taxonomy Order', 'counter' ),
+			menu_title:  __( 'Taxonomy Order', 'counter' ),
+			capability:  'manage_woocommerce',
+			menu_slug:   'counter-taxonomies',
+			callback:    [ $this->taxonomyOrder, 'render' ],
 		);
 
 		// Pure page builder — only when the active mode wants it.
@@ -221,6 +252,18 @@ final class AdminMenu {
 				COUNTER_VERSION,
 			);
 			wp_enqueue_script_module( 'counter-builder' );
+		}
+
+		// Taxonomy ordering pages — drag-drop term reordering
+		if ( str_contains( $hook, 'counter-categories-order' ) || str_contains( $hook, 'counter-variants-order' ) || str_contains( $hook, 'counter-taxonomies' ) ) {
+			// Load Sortable.js from CDN
+			wp_register_script( 'sortable', 'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js', [], '1.15.0', [ 'strategy' => 'defer' ] );
+
+			wp_register_style(  'counter-taxonomy-order', COUNTER_URL . 'assets/admin/taxonomy-order.css', [], COUNTER_VERSION );
+			wp_register_script( 'counter-taxonomy-order', COUNTER_URL . 'assets/admin/taxonomy-order.js', [ 'sortable' ], COUNTER_VERSION, [ 'strategy' => 'defer' ] );
+
+			wp_enqueue_style(  'counter-taxonomy-order' );
+			wp_enqueue_script( 'counter-taxonomy-order' );
 		}
 	}
 }
