@@ -60,8 +60,21 @@ final class CustomTaxonomyOrderPage extends TaxonomyOrderPage {
 	}
 
 	protected function getTerms(): array {
-		// For MVP, return empty — custom taxonomies created via filters
-		// In future: integrate with custom term registration system
-		return [];
+		// MVP: Show all attributes as reorderable items across all custom taxonomy tabs
+		// Vendors and Collections are managed separately via extensions/filters
+		$pdo = \Counter\DB::pdo();
+		$stmt = $pdo->prepare(
+			"SELECT id, name FROM attributes ORDER BY name"
+		);
+		$stmt->execute();
+
+		$terms = [];
+		foreach ( $stmt->fetchAll() as $row ) {
+			$terms[] = [
+				'id'   => (int) $row['id'],
+				'name' => (string) $row['name'],
+			];
+		}
+		return $terms;
 	}
 }
