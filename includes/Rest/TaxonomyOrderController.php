@@ -54,7 +54,7 @@ final class TaxonomyOrderController {
 
 		if ( ! $this->isValidTaxonomy( $type ) ) {
 			return new \WP_REST_Response(
-				[ 'error' => [ 'message' => "Unknown taxonomy: $type" ] ],
+				[ 'code' => 'invalid_taxonomy', 'message' => "Unknown taxonomy: $type" ],
 				400
 			);
 		}
@@ -78,14 +78,14 @@ final class TaxonomyOrderController {
 
 		if ( ! $this->isValidTaxonomy( $type ) ) {
 			return new \WP_REST_Response(
-				[ 'error' => [ 'message' => "Unknown taxonomy: $type" ] ],
+				[ 'code' => 'invalid_taxonomy', 'message' => "Unknown taxonomy: $type" ],
 				400
 			);
 		}
 
 		if ( ! $updates ) {
 			return new \WP_REST_Response(
-				[ 'error' => [ 'message' => 'No updates provided' ] ],
+				[ 'code' => 'missing_updates', 'message' => 'No updates provided' ],
 				400
 			);
 		}
@@ -94,13 +94,13 @@ final class TaxonomyOrderController {
 		foreach ( $updates as $termId => $data ) {
 			if ( ! is_numeric( $termId ) || ! is_array( $data ) ) {
 				return new \WP_REST_Response(
-					[ 'error' => [ 'message' => 'Invalid update format' ] ],
+					[ 'code' => 'invalid_format', 'message' => 'Invalid update format' ],
 					400
 				);
 			}
 			if ( ! isset( $data['position'] ) || ! is_numeric( $data['position'] ) ) {
 				return new \WP_REST_Response(
-					[ 'error' => [ 'message' => 'Missing position for term ' . $termId ] ],
+					[ 'code' => 'missing_position', 'message' => 'Missing position for term ' . $termId ],
 					400
 				);
 			}
@@ -110,7 +110,7 @@ final class TaxonomyOrderController {
 			$this->orders->batchReorder( $type, $updates );
 		} catch ( \DomainException $e ) {
 			return new \WP_REST_Response(
-				[ 'error' => [ 'message' => $e->getMessage() ] ],
+				[ 'code' => 'taxonomy_error', 'message' => $e->getMessage() ],
 				422
 			);
 		}
