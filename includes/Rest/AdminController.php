@@ -25,6 +25,7 @@
 
 namespace Counter\Rest;
 
+use Counter\Admin\WooProductPatcher;
 use Counter\DB;
 use Counter\Repositories\OrderRepository;
 use Counter\Services\RefundService;
@@ -36,6 +37,7 @@ final class AdminController {
 	public function __construct(
 		private readonly OrderRepository $orders,
 		private readonly RefundService $refunds,
+		private readonly WooProductPatcher $wooPatcher,
 	) {}
 
 	public const NAMESPACE = 'counter/v1';
@@ -251,7 +253,7 @@ final class AdminController {
 		$rows = [];
 		foreach ( $products as $wc ) {
 			if ( ! $wc instanceof \WC_Product ) continue;
-			$rows[] = $this->wcProductToRow( $wc );
+			$rows[] = $this->wooPatcher->toRow( $wc );
 		}
 
 		return new \WP_REST_Response( [
@@ -467,7 +469,7 @@ final class AdminController {
 			if ( ! $wc instanceof \WC_Product ) {
 				return new \WP_REST_Response( [ 'error' => [ 'message' => 'Product not found.' ] ], 404 );
 			}
-			return new \WP_REST_Response( $this->wcProductDetail( $wc ), 200 );
+			return new \WP_REST_Response( $this->wooPatcher->toDetail( $wc ), 200 );
 		}
 
 		// Native (Pure) path — pull a single row, hydrate
@@ -638,7 +640,7 @@ final class AdminController {
 		// Unlocked mode — patch through Woo so we don't silently UPDATE
 		// the empty SQLite products table.
 		if ( \Counter\Mode::catalogSource() === 'woo' && function_exists( 'wc_get_product' ) ) {
-			return $this->patchWooProduct( $id, $body );
+			return $this->wooPatcher->patch( $id, $body );
 		}
 
 		[ $sets, $bind, $errors ] = $this->prepareUpdate( $body );
@@ -669,7 +671,7 @@ final class AdminController {
 
 		// Unlocked mode — route bulk through Woo.
 		if ( \Counter\Mode::catalogSource() === 'woo' && function_exists( 'wc_get_product' ) ) {
-			return $this->bulkWooProducts( $action, $ids, $body );
+			return $this->wooPatcher->bulkOps( $ids, $action, $body );
 		}
 
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '?' ) );

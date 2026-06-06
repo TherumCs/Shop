@@ -584,10 +584,15 @@ function counter_register_container_bindings(): void {
 	);
 
 	// Admin REST controller — spreadsheet endpoints + refunds
+	$c->singleton( \Counter\Admin\WooProductPatcher::class, fn( $c ) =>
+		new \Counter\Admin\WooProductPatcher()
+	);
+
 	$c->singleton( \Counter\Rest\AdminController::class, fn( $c ) =>
 		new \Counter\Rest\AdminController(
 			$c->get( \Counter\Repositories\OrderRepository::class ),
 			$c->get( \Counter\Services\RefundService::class ),
+			$c->get( \Counter\Admin\WooProductPatcher::class ),
 		)
 	);
 }
