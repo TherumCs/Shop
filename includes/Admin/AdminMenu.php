@@ -175,6 +175,20 @@ final class AdminMenu {
 				'before'
 			);
 			wp_enqueue_script( 'shop-products-grid' );
+
+			// Product editor drawer — ES module (Preact + htm via esm.sh).
+			// Registered with `type=module` filter so WP emits the right
+			// script tag attribute.
+			wp_register_style(  'shop-product-editor', SHOP_URL . 'assets/admin/product-editor.css', [], SHOP_VERSION );
+			wp_enqueue_style(   'shop-product-editor' );
+			add_filter( 'script_loader_tag', function ( $tag, $handle ) {
+				if ( $handle === 'shop-product-editor' ) {
+					return str_replace( '<script ', '<script type="module" ', $tag );
+				}
+				return $tag;
+			}, 10, 2 );
+			wp_register_script( 'shop-product-editor', SHOP_URL . 'assets/admin/product-editor.js', [], SHOP_VERSION, [ 'in_footer' => true ] );
+			wp_enqueue_script(  'shop-product-editor' );
 		}
 
 		if ( str_contains( $hook, 'shop-orders' ) ) {

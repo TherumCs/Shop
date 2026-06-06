@@ -83,9 +83,8 @@ final class AdminController {
 		] );
 
 		register_rest_route( self::NAMESPACE, '/admin/products/(?P<id>\d+)', [
-			'methods'             => 'PATCH',
-			'callback'            => [ $this, 'patchProduct' ],
-			'permission_callback' => $auth,
+			[ 'methods' => 'GET',   'callback' => [ $this, 'getProduct' ],   'permission_callback' => $auth ],
+			[ 'methods' => 'PATCH', 'callback' => [ $this, 'patchProduct' ], 'permission_callback' => $auth ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/admin/products/bulk', [
@@ -323,32 +322,82 @@ final class AdminController {
 			return new \WP_REST_Response( [ 'error' => [ 'message' => 'Product not found.' ] ], 404 );
 		}
 		$ok = [];
-		foreach ( $body as $field => $value ) {
-			switch ( $field ) {
-				case 'title':     $wc->set_name( (string) $value );   $ok[] = $field; break;
-				case 'status':    $wc->set_status( (string) $value ); $ok[] = $field; break;
-				case 'sku':       $wc->set_sku( (string) $value );    $ok[] = $field; break;
-				case 'stock_qty':
-					if ( $value === null || $value === '' ) {
-						$wc->set_manage_stock( false );
-					} else {
-						$wc->set_manage_stock( true );
-						$wc->set_stock_quantity( (int) $value );
-					}
-					$ok[] = $field;
-					break;
-				case 'price':
-					if ( $value === null || $value === '' ) {
-						$wc->set_regular_price( '' );
-					} else {
-						$wc->set_regular_price( number_format( ( (int) $value ) / 100, 2, '.', '' ) );
-					}
-					$ok[] = $field;
-					break;
-				// Silently skip fields that don't map (compare_at_price,
-				// has_variants, etc.) — those are derived in Woo.
-			}
+
+		// Top-level scalar fields (used by inline-grid edits + drawer's
+		// General tab).
+		foreach ( [ 'title', 'slug', 'status', 'description', 'short_description' ] as $field ) {
+			if ( ! array_key_exists( $field, $body ) ) continue;
+			$value = $body[ $field ];
+			match ( $field ) {
+				'title'             => $wc->set_name( (string) $value ),
+				'slug'              => $wc->set_slug( (string) $value ),
+				'status'            => $wc->set_status( (string) $value ),
+				'description'       => $wc->set_description( (string) $value ),
+				'short_description' => $wc->set_short_description( (string) $value ),
+			};
+			$ok[] = $field;
 		}
+
+		// Legacy flat inline-edit fields (sku/stock_qty/price kept here
+		// so the grid's PATCH still works post-refactor).
+		if ( array_key_exists( 'sku', $body ) )       { $wc->set_sku( (string) $body['sku'] ); $ok[] = 'sku'; }
+		if ( array_key_exists( 'stock_qty', $body ) ) {
+			$v = $body['stock_qty'];
+			if ( $v === null || $v === '' ) $wc->set_manage_stock( false );
+			else { $wc->set_manage_stock( true ); $wc->set_stock_quantity( (int) $v ); }
+			$ok[] = 'stock_qty';
+		}
+		if ( array_key_exists( 'price', $body ) ) {
+			$v = $body['price'];
+			$wc->set_regular_price( ( $v === null || $v === '' ) ? '' : number_format( ( (int) $v ) / 100, 2, '.', '' ) );
+			$ok[] = 'price';
+		}
+
+		// Drawer-nested groups: price{}, inventory{}, shipping{}, images{}, seo{}
+		if ( is_array( $body['price'] ?? null ) ) {
+			$p = $body['price'];
+			if ( array_key_exists( 'regular', $p ) ) $wc->set_regular_price( $p['regular'] === null ? '' : number_format( ( (int) $p['regular'] ) / 100, 2, '.', '' ) );
+			if ( array_key_exists( 'sale', $p ) )    $wc->set_sale_price( $p['sale'] === null ? '' : number_format( ( (int) $p['sale'] ) / 100, 2, '.', '' ) );
+			if ( array_key_exists( 'sale_from', $p ) ) $wc->set_date_on_sale_from( $p['sale_from'] ?: null );
+			if ( array_key_exists( 'sale_to',   $p ) ) $wc->set_date_on_sale_to(   $p['sale_to']   ?: null );
+			$ok[] = 'price';
+		}
+		if ( is_array( $body['inventory'] ?? null ) ) {
+			$i = $body['inventory'];
+			if ( array_key_exists( 'sku', $i ) )          $wc->set_sku( (string) $i['sku'] );
+			if ( array_key_exists( 'manage_stock', $i ) ) $wc->set_manage_stock( (bool) $i['manage_stock'] );
+			if ( array_key_exists( 'stock_qty', $i ) && $wc->managing_stock() ) $wc->set_stock_quantity( (int) $i['stock_qty'] );
+			if ( array_key_exists( 'stock_status', $i ) && $i['stock_status'] ) $wc->set_stock_status( (string) $i['stock_status'] );
+			if ( array_key_exists( 'backorder', $i ) && $i['backorder'] !== null ) $wc->set_backorders( (string) $i['backorder'] );
+			if ( array_key_exists( 'low_stock_amount', $i ) ) $wc->set_low_stock_amount( $i['low_stock_amount'] === null ? '' : (string) (int) $i['low_stock_amount'] );
+			$ok[] = 'inventory';
+		}
+		if ( is_array( $body['shipping'] ?? null ) ) {
+			$s = $body['shipping'];
+			if ( array_key_exists( 'weight', $s ) )         $wc->set_weight( (string) $s['weight'] );
+			if ( array_key_exists( 'length', $s ) )         $wc->set_length( (string) $s['length'] );
+			if ( array_key_exists( 'width',  $s ) )         $wc->set_width(  (string) $s['width'] );
+			if ( array_key_exists( 'height', $s ) )         $wc->set_height( (string) $s['height'] );
+			if ( array_key_exists( 'shipping_class', $s ) ) $wc->set_shipping_class_id( (int) wp_get_term_taxonomy( $s['shipping_class'] ?: 0, 'product_shipping_class' ) );
+			if ( array_key_exists( 'virtual', $s ) )        $wc->set_virtual( (bool) $s['virtual'] );
+			if ( array_key_exists( 'downloadable', $s ) )   $wc->set_downloadable( (bool) $s['downloadable'] );
+			$ok[] = 'shipping';
+		}
+		if ( is_array( $body['images'] ?? null ) ) {
+			$im = $body['images'];
+			if ( isset( $im['primary']['id'] ) ) $wc->set_image_id( (int) $im['primary']['id'] );
+			if ( isset( $im['gallery'] ) && is_array( $im['gallery'] ) ) {
+				$wc->set_gallery_image_ids( array_filter( array_map( fn( $g ) => (int) ( $g['id'] ?? 0 ), $im['gallery'] ) ) );
+			}
+			$ok[] = 'images';
+		}
+		if ( is_array( $body['seo'] ?? null ) ) {
+			$s = $body['seo'];
+			if ( isset( $s['meta_title'] ) )       update_post_meta( $id, '_yoast_wpseo_title',    (string) $s['meta_title'] );
+			if ( isset( $s['meta_description'] ) ) update_post_meta( $id, '_yoast_wpseo_metadesc', (string) $s['meta_description'] );
+			$ok[] = 'seo';
+		}
+
 		$wc->save();
 		return new \WP_REST_Response( [ 'ok' => true, 'updated' => $ok, 'row' => $this->wcProductToRow( $wc ) ], 200 );
 	}
@@ -400,6 +449,182 @@ final class AdminController {
 				return new \WP_REST_Response( [ 'error' => [ 'message' => "Unknown bulk action '$action'." ] ], 400 );
 		}
 		return new \WP_REST_Response( [ 'ok' => true, 'count' => $touched, 'action' => $action ], 200 );
+	}
+
+	/**
+	 * GET /admin/products/{id} — return everything the drawer editor
+	 * needs. Mode-aware: pulls from Woo in Unlocked mode, from our
+	 * SQLite table otherwise. Shape is intentionally flat per tab so
+	 * the frontend can map straight onto form state.
+	 */
+	public function getProduct( \WP_REST_Request $req ): \WP_REST_Response {
+		$id = (int) $req->get_param( 'id' );
+
+		if ( \Shop\Mode::catalogSource() === 'woo' && function_exists( 'wc_get_product' ) ) {
+			$wc = wc_get_product( $id );
+			if ( ! $wc instanceof \WC_Product ) {
+				return new \WP_REST_Response( [ 'error' => [ 'message' => 'Product not found.' ] ], 404 );
+			}
+			return new \WP_REST_Response( $this->wcProductDetail( $wc ), 200 );
+		}
+
+		// Native (Pure) path — pull a single row, hydrate
+		$pdo = DB::pdo();
+		$stmt = $pdo->prepare( "SELECT * FROM products WHERE id = :id" );
+		$stmt->execute( [ ':id' => $id ] );
+		$row = $stmt->fetch();
+		if ( ! $row ) return new \WP_REST_Response( [ 'error' => [ 'message' => 'Product not found.' ] ], 404 );
+
+		return new \WP_REST_Response( $this->nativeProductDetail( $row ), 200 );
+	}
+
+	/**
+	 * Enrich a WC_Product into the drawer's expected shape.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function wcProductDetail( \WC_Product $wc ): array {
+		$galleryIds = array_filter( array_map( 'intval', $wc->get_gallery_image_ids() ) );
+		$gallery    = array_map( fn( $id ) => [
+			'id'  => $id,
+			'url' => (string) wp_get_attachment_image_url( $id, 'medium' ),
+		], $galleryIds );
+
+		// Variants (only meaningful for variable products)
+		$variants = [];
+		if ( $wc->is_type( 'variable' ) ) {
+			foreach ( $wc->get_children() as $vid ) {
+				$v = wc_get_product( $vid );
+				if ( ! $v instanceof \WC_Product_Variation ) continue;
+				$variants[] = [
+					'id'             => $v->get_id(),
+					'sku'            => (string) $v->get_sku(),
+					'regular_price'  => $this->wcPriceCents( $v->get_regular_price() ),
+					'sale_price'     => $this->wcPriceCents( $v->get_sale_price() ),
+					'stock_qty'      => $v->managing_stock() ? (int) $v->get_stock_quantity() : null,
+					'manage_stock'   => (bool) $v->managing_stock(),
+					'attributes'     => $v->get_attributes(),
+					'image_id'       => (int) $v->get_image_id() ?: null,
+				];
+			}
+		}
+
+		$attrs = [];
+		foreach ( $wc->get_attributes() as $key => $attr ) {
+			$attrs[] = [
+				'name'                => is_object( $attr ) ? $attr->get_name() : (string) $key,
+				'options'             => is_object( $attr ) ? $attr->get_options() : [],
+				'used_for_variations' => is_object( $attr ) ? $attr->get_variation() : false,
+				'visible'             => is_object( $attr ) ? $attr->get_visible() : true,
+			];
+		}
+
+		$primaryId = (int) $wc->get_image_id();
+		return [
+			'id'               => $wc->get_id(),
+			'source'           => 'woo',
+			'title'            => $wc->get_name(),
+			'slug'             => $wc->get_slug(),
+			'status'           => $wc->get_status(),
+			'type'             => $wc->get_type(),
+			'description'      => $wc->get_description(),
+			'short_description'=> $wc->get_short_description(),
+			'price' => [
+				'regular' => $this->wcPriceCents( $wc->get_regular_price() ),
+				'sale'    => $this->wcPriceCents( $wc->get_sale_price() ),
+				'sale_from' => $wc->get_date_on_sale_from() ? $wc->get_date_on_sale_from()->getTimestamp() : null,
+				'sale_to'   => $wc->get_date_on_sale_to()   ? $wc->get_date_on_sale_to()->getTimestamp()   : null,
+				'cost'      => null, // Woo core doesn't track cost
+			],
+			'inventory' => [
+				'sku'          => (string) $wc->get_sku(),
+				'manage_stock' => (bool) $wc->managing_stock(),
+				'stock_qty'    => $wc->managing_stock() ? (int) $wc->get_stock_quantity() : null,
+				'stock_status' => $wc->get_stock_status(),
+				'backorder'    => $wc->get_backorders(),
+				'low_stock_amount' => $wc->get_low_stock_amount() !== '' ? (int) $wc->get_low_stock_amount() : null,
+			],
+			'shipping' => [
+				'weight'         => (string) $wc->get_weight(),
+				'length'         => (string) $wc->get_length(),
+				'width'          => (string) $wc->get_width(),
+				'height'         => (string) $wc->get_height(),
+				'shipping_class' => (string) $wc->get_shipping_class(),
+				'virtual'        => (bool) $wc->is_virtual(),
+				'downloadable'   => (bool) $wc->is_downloadable(),
+			],
+			'images' => [
+				'primary' => $primaryId ? [
+					'id'  => $primaryId,
+					'url' => (string) wp_get_attachment_image_url( $primaryId, 'medium' ),
+				] : null,
+				'gallery' => $gallery,
+			],
+			'variants'   => $variants,
+			'attributes' => $attrs,
+			'seo' => [
+				// Standard meta keys most SEO plugins write; harmless when blank
+				'meta_title'       => (string) get_post_meta( $wc->get_id(), '_yoast_wpseo_title', true ),
+				'meta_description' => (string) get_post_meta( $wc->get_id(), '_yoast_wpseo_metadesc', true ),
+			],
+			'urls' => [
+				'view'         => (string) $wc->get_permalink(),
+				'edit_in_woo'  => (string) get_edit_post_link( $wc->get_id(), 'raw' ),
+			],
+		];
+	}
+
+	/**
+	 * Native-mode detail shape — for the Pure path.
+	 *
+	 * @param array<string,mixed> $row
+	 * @return array<string,mixed>
+	 */
+	private function nativeProductDetail( array $row ): array {
+		$id = (int) $row['id'];
+		$primaryId = (int) ( $row['primary_image_id'] ?? 0 );
+		return [
+			'id'    => $id,
+			'source'=> 'native',
+			'title' => (string) ( $row['title'] ?? '' ),
+			'slug'  => (string) ( $row['slug'] ?? '' ),
+			'status'=> (string) ( $row['status'] ?? 'draft' ),
+			'type'  => $row['has_variants'] ? 'variable' : 'simple',
+			'description'       => (string) ( $row['description'] ?? '' ),
+			'short_description' => (string) ( $row['short_description'] ?? '' ),
+			'price' => [
+				'regular'  => $row['price'] !== null ? (int) $row['price'] : null,
+				'sale'     => null,
+				'sale_from'=> null,
+				'sale_to'  => null,
+				'cost'     => $row['cost'] !== null ? (int) $row['cost'] : null,
+			],
+			'inventory' => [
+				'sku'          => (string) ( $row['sku'] ?? '' ),
+				'manage_stock' => (bool) ( $row['track_inventory'] ?? false ),
+				'stock_qty'    => $row['stock_qty'] !== null ? (int) $row['stock_qty'] : null,
+				'stock_status' => null,
+				'backorder'    => null,
+				'low_stock_amount' => null,
+			],
+			'shipping' => [
+				'weight' => '', 'length' => '', 'width' => '', 'height' => '',
+				'shipping_class' => '',
+				'virtual'      => ! ( $row['is_shippable'] ?? true ),
+				'downloadable' => (bool) ( $row['is_digital'] ?? false ),
+			],
+			'images' => [
+				'primary' => $primaryId ? [ 'id' => $primaryId, 'url' => (string) wp_get_attachment_image_url( $primaryId, 'medium' ) ] : null,
+				'gallery' => [],
+			],
+			'variants'   => [], // populated via /admin/products/{id}/variants in a follow-up
+			'attributes' => [],
+			'seo'        => [ 'meta_title' => '', 'meta_description' => '' ],
+			'urls' => [
+				'view'        => (string) home_url( '/product/' . $row['slug'] ),
+				'edit_in_woo' => null,
+			],
+		];
 	}
 
 	public function patchProduct( \WP_REST_Request $req ): \WP_REST_Response {

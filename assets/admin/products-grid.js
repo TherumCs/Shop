@@ -93,7 +93,7 @@
 		pagesEl.textContent = Math.max( 1, Math.ceil( state.total / state.perPage ) );
 
 		if ( state.rows.length === 0 ) {
-			tbody.innerHTML = '<tr class="shop-grid__empty"><td colspan="9">No products. <a href="?page=shop-import">Import some.</a></td></tr>';
+			tbody.innerHTML = '<tr class="shop-grid__empty"><td colspan="10">No products. <a href="?page=shop-import">Import some.</a></td></tr>';
 			return;
 		}
 
@@ -110,7 +110,7 @@
 					'<td class="shop-grid__td shop-grid__td--check">' +
 						'<input type="checkbox" data-toggle="' + r.id + '" ' + ( isSel ? 'checked' : '' ) + ' />' +
 					'</td>' +
-					'<td class="shop-grid__td shop-grid__td--img">' + img + '</td>' +
+					'<td class="shop-grid__td shop-grid__td--img" data-shop-open-product="' + r.id + '" title="Open editor">' + img + '</td>' +
 					cellEditable( 'title',    esc( r.title || '' ),    r ) +
 					cellEditable( 'status',   statusPill( r.status ),  r ) +
 					cellEditable( 'price',    esc( price ),            r ) +
@@ -118,6 +118,7 @@
 					cellEditable( 'sku',      esc( r.sku || '' ),      r ) +
 					'<td class="shop-grid__td">' + type + '</td>' +
 					'<td class="shop-grid__td shop-grid__td--meta">' + ago( r.updated_at ) + '</td>' +
+					'<td class="shop-grid__td shop-grid__td--action"><button class="button button-small" data-shop-open-product="' + r.id + '">Open</button></td>' +
 				'</tr>'
 			);
 		} ).join( '' );
@@ -202,6 +203,17 @@
 	prevBtn.addEventListener( 'click', function () { if ( state.page > 1 ) { state.page--; load(); } } );
 	nextBtn.addEventListener( 'click', function () {
 		if ( state.page < Math.ceil( state.total / state.perPage ) ) { state.page++; load(); }
+	} );
+
+	// ─── Open drawer (img cell or "Open" button) ────────────────────────────
+	// Delegated to the table so newly-rendered rows pick it up automatically.
+	// The product editor module listens for `shop:open-product` on document.
+	tbody.addEventListener( 'click', function ( e ) {
+		var btn = e.target.closest( '[data-shop-open-product]' );
+		if ( ! btn ) return;
+		var id = parseInt( btn.getAttribute( 'data-shop-open-product' ), 10 );
+		if ( ! id ) return;
+		document.dispatchEvent( new CustomEvent( 'shop:open-product', { detail: { id: id } } ) );
 	} );
 
 	// ─── Selection (with shift-range) ───────────────────────────────────────

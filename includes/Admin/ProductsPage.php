@@ -76,10 +76,11 @@ final class ProductsPage {
 								<th class="shop-grid__th"><?php esc_html_e( 'SKU', 'shop' ); ?></th>
 								<th class="shop-grid__th"><?php esc_html_e( 'Type', 'shop' ); ?></th>
 								<th class="shop-grid__th"   data-sort="updated_at"><?php esc_html_e( 'Updated', 'shop' ); ?> <span class="shop-grid__sort-arrow"></span></th>
+								<th class="shop-grid__th shop-grid__th--action"></th>
 							</tr>
 						</thead>
 						<tbody data-shop-grid-tbody>
-							<tr class="shop-grid__loading"><td colspan="9"><?php esc_html_e( 'Loading…', 'shop' ); ?></td></tr>
+							<tr class="shop-grid__loading"><td colspan="10"><?php esc_html_e( 'Loading…', 'shop' ); ?></td></tr>
 						</tbody>
 					</table>
 				</div>

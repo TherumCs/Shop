@@ -3,7 +3,7 @@
  * Plugin Name:       Shop by Therum
  * Plugin URI:        https://therum.studio/plugins/shop
  * Description:       A native commerce engine built for speed. One product entity with capability toggles (variants, shipping, digital delivery, POD routing), purpose-built SQLite schema, unified cart/checkout session, typed events + pipelines instead of hook spam. Pluggable payment, tax, shipping, and fulfillment providers via Nexus by Therum.
- * Version:           0.27.1
+ * Version:           0.28.0
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Author:            Therum Creative Studios
@@ -24,7 +24,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'SHOP_VERSION', '0.27.1' );
+define( 'SHOP_VERSION', '0.28.0' );
 define( 'SHOP_FILE', __FILE__ );
 define( 'SHOP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SHOP_URL', plugin_dir_url( __FILE__ ) );
