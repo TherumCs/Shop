@@ -73,10 +73,11 @@ final class PlaidProvider implements PaymentProvider {
 		}
 
 		// Resolve a Plaid `user.client_user_id` — we want this stable
-		// per customer for return-link UX. Fall back to a per-order
-		// random id if no customer is attached.
-		$clientUserId = $order->customer_id
-			? 'cust-' . $order->customer_id
+		// per customer for return-link UX. Use the WP user id when
+		// present (covers logged-in checkouts); otherwise scope per-
+		// order so guest checkouts still get a valid client_user_id.
+		$clientUserId = $order->userId
+			? 'user-' . $order->userId
 			: 'order-' . $order->id;
 
 		$body = $this->call( 'POST', 'link/token/create', [
@@ -115,14 +116,15 @@ final class PlaidProvider implements PaymentProvider {
 			'description' => 'Order ' . $order->number,
 			'ach_class'   => 'web',
 			'user'        => [
-				'legal_name' => (string) ( $order->billing_name ?? 'Customer' ),
+				// Billing name comes from the address blob, not a top-level field.
+				'legal_name' => (string) ( $order->billAddress['name'] ?? $order->shipAddress['name'] ?? 'Customer' ),
 			],
 		] );
 		return (string) ( $res['transfer_intent']['id'] ?? '' );
 	}
 
 	public function refund( Order $order, Money $amount, string $idempotencyKey ): string {
-		$transferId = (string) ( $order->payment_intent_id ?? '' );
+		$transferId = (string) ( $order->paymentIntentId ?? '' );
 		if ( $transferId === '' ) throw new \RuntimeException( 'Order has no Plaid transfer id.' );
 		$body = $this->call( 'POST', 'transfer/refund/create', [
 			'client_id'        => $this->clientId(),

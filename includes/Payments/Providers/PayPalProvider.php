@@ -77,7 +77,10 @@ final class PayPalProvider implements PaymentProvider {
 	}
 
 	public function refund( Order $order, Money $amount, string $idempotencyKey ): string {
-		$captureId = (string) ( $order->payment_capture_id ?? $order->payment_intent_id ?? '' );
+		// PayPal Orders v2 — the "intent_id" we stored at capture time
+		// IS the PayPal order id, which is what /captures/{id}/refund
+		// wants. No separate capture id is tracked on our Order DTO.
+		$captureId = (string) ( $order->paymentIntentId ?? '' );
 		if ( $captureId === '' ) throw new \RuntimeException( 'Order has no PayPal capture id.' );
 		$body = $this->call( 'POST', "v2/payments/captures/$captureId/refund", [
 			'amount' => [

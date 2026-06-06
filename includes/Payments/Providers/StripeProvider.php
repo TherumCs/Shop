@@ -85,7 +85,7 @@ final class StripeProvider implements PaymentProvider {
 	}
 
 	public function refund( Order $order, Money $amount, string $idempotencyKey ): string {
-		$intentId = (string) ( $order->payment_intent_id ?? '' );
+		$intentId = (string) ( $order->paymentIntentId ?? '' );
 		if ( $intentId === '' ) throw new \RuntimeException( 'Order has no Stripe intent id.' );
 		$body = $this->call( 'POST', 'refunds', [
 			'payment_intent' => $intentId,

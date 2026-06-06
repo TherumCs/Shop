@@ -123,7 +123,18 @@ add_action( 'admin_init', function (): void {
 // Register default service bindings. This is the wiring map — read this to
 // understand what's swappable. Bindings can be overridden by other code that
 // runs after `plugins_loaded` priority 0.
-add_action( 'plugins_loaded', function (): void {
+//
+// Also hooked to `shop_bootstrap_container_for_activation` so the
+// activation hook (which fires post-plugins_loaded on first install)
+// can populate the container before reading from it.
+add_action( 'shop_bootstrap_container_for_activation', 'shop_register_container_bindings' );
+// Priority 0 — must run before any other plugins_loaded callback that
+// reads from the container (admin menu at 5, REST registration, etc).
+add_action( 'plugins_loaded', 'shop_register_container_bindings', 0 );
+function shop_register_container_bindings(): void {
+	static $done = false;
+	if ( $done ) return;
+	$done = true;
 	$c = \Shop\Container::instance();
 
 	// ─── Event bus ──────────────────────────────────────────────────────
@@ -414,10 +425,14 @@ add_action( 'plugins_loaded', function (): void {
 		$reg->register( new \Shop\Elements\Catalog\ProductGrid( $products ) );
 		// Commerce surfaces (cart/checkout/received)
 		$reg->register( new \Shop\Elements\Commerce\CartContents(
-			$c->get( \Shop\Services\CartRenderer::class )
+			$c->get( \Shop\Services\CartService::class ),
+			$c->get( \Shop\Services\CartRenderer::class ),
+			$c->get( \Shop\Services\CartTokenManager::class ),
 		) );
 		$reg->register( new \Shop\Elements\Commerce\CheckoutForm(
-			$c->get( \Shop\Services\CheckoutRenderer::class )
+			$c->get( \Shop\Services\CartService::class ),
+			$c->get( \Shop\Services\CheckoutRenderer::class ),
+			$c->get( \Shop\Services\CartTokenManager::class ),
 		) );
 		$reg->register( new \Shop\Elements\Commerce\OrderReceived(
 			$c->get( \Shop\Repositories\OrderRepository::class )
@@ -566,7 +581,7 @@ add_action( 'plugins_loaded', function (): void {
 			$c->get( \Shop\Services\RefundService::class ),
 		)
 	);
-}, 0 );
+}
 
 // ─── Admin menu registration ───────────────────────────────────────────────
 add_action( 'plugins_loaded', function (): void {
@@ -779,8 +794,24 @@ add_action( 'plugins_loaded', function (): void {
 // Flush rewrite rules on activation so /p/{slug} and /product/{slug}/
 // routes resolve immediately. The router registers the rules; this
 // just tells WP to refresh its compiled rewrite cache.
+//
+// First-time activation gotcha: container bindings register inside the
+// `plugins_loaded` callback, but the activation hook fires AFTER
+// `plugins_loaded` has already passed during `activate_plugin()`'s
+// include of this file — so the binding closure for PageRouter (and
+// every other service) has never run. We bootstrap manually here.
 register_activation_hook( __FILE__, function (): void {
-	\Shop\Container::instance()->get( \Shop\Services\PageRouter::class )->rewrites();
+	if ( ! \Shop\Container::instance()->has( \Shop\Services\PageRouter::class ) ) {
+		// Trigger our own plugins_loaded handlers — only ours, not the
+		// global action — so the container is fully populated before
+		// the activation hook tries to read from it.
+		do_action( 'shop_bootstrap_container_for_activation' );
+	}
+	// Pure-mode routes only — Unlocked mode delegates routing to
+	// whichever page builder is active.
+	if ( \Shop\Container::instance()->has( \Shop\Services\PageRouter::class ) ) {
+		\Shop\Container::instance()->get( \Shop\Services\PageRouter::class )->rewrites();
+	}
 	flush_rewrite_rules();
 } );
 

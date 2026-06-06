@@ -182,7 +182,7 @@ final class OrderImporter {
 		$stmt = $pdo->prepare(
 			"INSERT INTO order_items (
 				order_id, product_id, variant_id, sku, title,
-				snapshot, quantity, unit_price, line_total, discount_total, vendor_unit_cost,
+				product_snapshot, quantity, unit_price, line_total, discount_total, vendor_unit_cost,
 				fulfillment_status, fulfillment_provider, fulfillment_id,
 				tracking_number, tracking_carrier
 			) VALUES (

@@ -47,6 +47,44 @@ final class OrderRepository {
 	}
 
 	/**
+	 * Paginated list with optional status / date filters. Used by the
+	 * order exporter, the admin orders grid, and the HPOS adapter.
+	 *
+	 * Filters (all optional):
+	 *   status     — exact match on orders.status
+	 *   date_from  — ISO 8601 string; orders created at or after
+	 *   date_to    — ISO 8601 string; orders created at or before
+	 *
+	 * @param array<string,mixed> $filters
+	 * @return Order[]
+	 */
+	public function list( array $filters = [], int $limit = 100, int $offset = 0 ): array {
+		$where = '1=1';
+		$bind  = [];
+		if ( ! empty( $filters['status'] ) ) {
+			$where .= ' AND status = :st';
+			$bind[':st'] = (string) $filters['status'];
+		}
+		if ( ! empty( $filters['date_from'] ) ) {
+			$ts = strtotime( (string) $filters['date_from'] );
+			if ( $ts !== false ) { $where .= ' AND created_at >= :df'; $bind[':df'] = $ts; }
+		}
+		if ( ! empty( $filters['date_to'] ) ) {
+			$ts = strtotime( (string) $filters['date_to'] );
+			if ( $ts !== false ) { $where .= ' AND created_at <= :dt'; $bind[':dt'] = $ts; }
+		}
+		$stmt = DB::pdo()->prepare(
+			"SELECT * FROM orders WHERE $where ORDER BY created_at DESC LIMIT :lim OFFSET :off"
+		);
+		foreach ( $bind as $k => $v ) $stmt->bindValue( $k, $v );
+		$stmt->bindValue( ':lim', $limit,  \PDO::PARAM_INT );
+		$stmt->bindValue( ':off', $offset, \PDO::PARAM_INT );
+		$stmt->execute();
+		$rows = $stmt->fetchAll();
+		return array_map( fn( $r ) => $this->hydrate( $r ), $rows );
+	}
+
+	/**
 	 * Create an order from a cart. Snapshots every line item so historical
 	 * data survives product edits. Returns the new Order.
 	 */

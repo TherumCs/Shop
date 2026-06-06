@@ -84,16 +84,22 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 		<aside class="shop-checkout__summary">
 			<h3>Order summary</h3>
 			<div class="shop-checkout__line-items">
-				<?php foreach ( $cart->items as $item ) : ?>
+				<?php foreach ( $cart->items as $item ) :
+					// Title + variant label live in $item->meta — CartItem
+					// keeps presentation snapshots there so the cart can
+					// render without re-querying the product.
+					$title = (string) ( $item->meta['title']         ?? 'Item' );
+					$vlbl  = (string) ( $item->meta['variant_label'] ?? '' );
+				?>
 					<div class="shop-checkout__line-item">
 						<div class="shop-checkout__li-img">
-							<?php echo esc_html( mb_strtoupper( mb_substr( $item->title, 0, 1 ) ) ); ?>
+							<?php echo esc_html( mb_strtoupper( mb_substr( $title, 0, 1 ) ) ); ?>
 							<span class="shop-checkout__li-qty"><?php echo esc_html( (string) $item->quantity ); ?></span>
 						</div>
 						<div style="flex:1">
-							<div class="shop-checkout__li-name"><?php echo esc_html( $item->title ); ?></div>
-							<?php if ( $item->variantLabel ?? '' ) : ?>
-								<div class="shop-checkout__li-meta"><?php echo esc_html( (string) $item->variantLabel ); ?></div>
+							<div class="shop-checkout__li-name"><?php echo esc_html( $title ); ?></div>
+							<?php if ( $vlbl !== '' ) : ?>
+								<div class="shop-checkout__li-meta"><?php echo esc_html( $vlbl ); ?></div>
 							<?php endif; ?>
 						</div>
 						<div class="shop-checkout__li-price">
