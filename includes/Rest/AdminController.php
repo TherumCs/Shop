@@ -183,8 +183,10 @@ final class AdminController {
 			        primary_image_id, created_at, updated_at
 			   FROM products $where
 			   ORDER BY $sort $order
-			   LIMIT $per OFFSET $offset"
+			   LIMIT :per OFFSET :offset"
 		);
+		$stmt->bindValue( ':per', $per, \PDO::PARAM_INT );
+		$stmt->bindValue( ':offset', $offset, \PDO::PARAM_INT );
 		$stmt->execute( $bind );
 		$rows = $stmt->fetchAll();
 
@@ -756,8 +758,10 @@ final class AdminController {
 			        paid_at, created_at, updated_at
 			   FROM orders $where
 			   ORDER BY $sort $order
-			   LIMIT $per OFFSET $offset"
+			   LIMIT :per OFFSET :offset"
 		);
+		$stmt->bindValue( ':per', $per, \PDO::PARAM_INT );
+		$stmt->bindValue( ':offset', $offset, \PDO::PARAM_INT );
 		$stmt->execute( $bind );
 		$rows = $stmt->fetchAll();
 

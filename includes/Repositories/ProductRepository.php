@@ -34,6 +34,14 @@ interface ProductRepository {
 	public function findVariant( int $variantId, string $currency = 'USD' ): ?Variant;
 
 	/**
+	 * Batch-fetch variants by ID. Avoids N+1 when loading many variants.
+	 *
+	 * @param int[] $variantIds
+	 * @return Variant[]  Keyed by variant ID
+	 */
+	public function findVariants( array $variantIds, string $currency = 'USD' ): array;
+
+	/**
 	 * Resolve the effective price for a (product, variant) pair. Variant
 	 * price wins if set; falls back to product price; returns null if
 	 * neither is priced.

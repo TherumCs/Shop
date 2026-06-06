@@ -125,6 +125,35 @@ final class WooProductRepository implements ProductRepository {
 		return $this->variantCache[ $key ] = $this->variantFromWc( $wc, $currency );
 	}
 
+	public function findVariants( array $variantIds, string $currency = 'USD' ): array {
+		if ( ! $variantIds || ! function_exists( 'wc_get_product' ) ) return [];
+
+		$result = [];
+		$missing = [];
+
+		// Check cache first
+		foreach ( $variantIds as $variantId ) {
+			$key = $variantId . '|' . $currency;
+			if ( array_key_exists( $key, $this->variantCache ) ) {
+				if ( $this->variantCache[ $key ] !== null ) {
+					$result[ $variantId ] = $this->variantCache[ $key ];
+				}
+			} else {
+				$missing[] = $variantId;
+			}
+		}
+
+		// Fetch missing ones
+		foreach ( $missing as $variantId ) {
+			$variant = $this->findVariant( $variantId, $currency );
+			if ( $variant !== null ) {
+				$result[ $variantId ] = $variant;
+			}
+		}
+
+		return $result;
+	}
+
 	public function priceFor( Product $product, ?Variant $variant ): ?Money {
 		if ( $variant !== null && $variant->price !== null ) {
 			return $variant->price;

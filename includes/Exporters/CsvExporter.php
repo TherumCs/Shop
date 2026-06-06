@@ -64,24 +64,23 @@ final class CsvExporter implements Exporter {
 			return;
 		}
 
-		// TODO: when AttributeRepository can yield variants without an
-		// extra query per product, batch this. For v1, one row per
-		// variant via a follow-up findVariant loop is plenty.
-		// Variants come from ProductRepository::findVariant — but we
-		// don't have a "list variants" method yet on the read interface;
-		// the CSV importer can still consume the single-row form and
-		// admin can rebuild variants from that. Native catalog: hit the
-		// table directly.
+		// Query variant IDs in order, then batch-fetch all variants at once.
+		// This replaces the N+1 pattern from earlier versions.
 		$pdo = \Counter\DB::pdo();
 		$stmt = $pdo->prepare( "SELECT id FROM product_variants WHERE product_id = :p ORDER BY position ASC" );
 		$stmt->execute( [ ':p' => $product->id ] );
 		$variant_ids = array_map( 'intval', array_column( $stmt->fetchAll(), 'id' ) );
+
 		if ( ! $variant_ids ) {
 			fputcsv( $h, $this->productRow( $product, null ) );
 			return;
 		}
+
+		// Batch fetch all variants for this product in one query
+		$variants = $this->products->findVariants( $variant_ids );
+
 		foreach ( $variant_ids as $vid ) {
-			$variant = $this->products->findVariant( $vid );
+			$variant = $variants[ $vid ] ?? null;
 			if ( $variant === null ) continue;
 			fputcsv( $h, $this->productRow( $product, $variant ) );
 		}

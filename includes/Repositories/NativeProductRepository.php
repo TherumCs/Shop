@@ -39,6 +39,22 @@ final class NativeProductRepository implements ProductRepository {
 		return $row ? Variant::fromRow( $row, $currency ) : null;
 	}
 
+	public function findVariants( array $variantIds, string $currency = 'USD' ): array {
+		if ( ! $variantIds ) return [];
+
+		$pdo = DB::pdo();
+		$placeholders = implode( ',', array_fill( 0, count( $variantIds ), '?' ) );
+		$stmt = $pdo->prepare( "SELECT * FROM product_variants WHERE id IN ($placeholders)" );
+		$stmt->execute( $variantIds );
+
+		$result = [];
+		foreach ( $stmt->fetchAll() as $row ) {
+			$variant = Variant::fromRow( $row, $currency );
+			$result[ $variant->id ] = $variant;
+		}
+		return $result;
+	}
+
 	public function priceFor( Product $product, ?Variant $variant ): ?Money {
 		if ( $variant !== null && $variant->price !== null ) {
 			return $variant->price;
