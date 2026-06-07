@@ -152,6 +152,73 @@ final class ImporterPage {
 
 			</div>
 		</div>
+
+		<script>
+		( function () {
+			'use strict';
+
+			var btn = document.getElementById( 'counter-import-woo' );
+			var result = document.getElementById( 'counter-import-woo-result' );
+			var msg = document.getElementById( 'counter-import-woo-message' );
+
+			if ( ! btn ) return;
+
+			btn.addEventListener( 'click', function ( e ) {
+				e.preventDefault();
+
+				if ( ! confirm( 'This will import all products, variants, customers, and orders from WooCommerce into Counter. This may take a moment. Proceed?' ) ) {
+					return;
+				}
+
+				btn.disabled = true;
+				btn.textContent = 'Importing…';
+				result.style.display = 'none';
+
+				fetch( '<?php echo esc_url( rest_url( 'counter/v1/import/woocommerce' ) ); ?>', {
+					method: 'POST',
+					headers: {
+						'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>',
+						'Content-Type': 'application/json',
+					},
+					credentials: 'same-origin',
+					body: JSON.stringify( {} ),
+				} )
+				.then( function ( r ) {
+					return r.json().then( function ( j ) {
+						return { status: r.status, body: j };
+					} );
+				} )
+				.then( function ( res ) {
+					btn.disabled = false;
+					btn.textContent = 'Import everything from WooCommerce';
+
+					if ( res.status >= 400 ) {
+						msg.textContent = '❌ ' + ( res.body.message || 'Import failed.' );
+						result.style.display = 'block';
+						console.error( res.body );
+						return;
+					}
+
+					var stats = res.body.stats || {};
+					msg.innerHTML = '✅ ' +
+						'Imported ' + stats.products + ' products, ' +
+						stats.variants + ' variants, ' +
+						stats.customers + ' customers, ' +
+						stats.orders + ' orders, ' +
+						stats.order_items + ' order items. ' +
+						'You can now safely delete WooCommerce!';
+					result.style.display = 'block';
+				} )
+				.catch( function ( err ) {
+					btn.disabled = false;
+					btn.textContent = 'Import everything from WooCommerce';
+					msg.textContent = '❌ ' + ( err.message || 'Import crashed.' );
+					result.style.display = 'block';
+					console.error( err );
+				} );
+			} );
+		} )();
+		</script>
 		<?php
 	}
 }
