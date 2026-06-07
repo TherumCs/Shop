@@ -64,14 +64,36 @@ final class ComprehensiveWooImporter {
 	}
 
 	private function importCustomers( \PDO $pdo ): int {
-		$wc_customers = wc_get_customers( [ 'limit' => -1 ] );
+		// Get all WordPress users (they're also customers in WooCommerce)
+		$users = get_users( [ 'number' => -1 ] );
 		$count = 0;
 
-		foreach ( $wc_customers as $wc_cust ) {
+		foreach ( $users as $user ) {
 			// Check if already imported
 			$stmt = $pdo->prepare( 'SELECT id FROM customers WHERE wp_user_id = :uid' );
-			$stmt->execute( [ ':uid' => $wc_cust->get_id() ] );
+			$stmt->execute( [ ':uid' => $user->ID ] );
 			if ( $stmt->fetch() ) continue;
+
+			// Get WooCommerce customer data if available
+			$wc_customer = function_exists( 'wc_get_customer' ) ? wc_get_customer( $user->ID ) : null;
+
+			$phone = '';
+			$addr1 = '';
+			$addr2 = '';
+			$city = '';
+			$state = '';
+			$postal = '';
+			$country = '';
+
+			if ( $wc_customer ) {
+				$phone = $wc_customer->get_billing_phone() ?: '';
+				$addr1 = $wc_customer->get_billing_address_1() ?: '';
+				$addr2 = $wc_customer->get_billing_address_2() ?: '';
+				$city = $wc_customer->get_billing_city() ?: '';
+				$state = $wc_customer->get_billing_state() ?: '';
+				$postal = $wc_customer->get_billing_postcode() ?: '';
+				$country = $wc_customer->get_billing_country() ?: '';
+			}
 
 			$stmt = $pdo->prepare( <<<SQL
 				INSERT INTO customers (
@@ -90,21 +112,21 @@ final class ComprehensiveWooImporter {
 			SQL );
 
 			$stmt->execute( [
-				':uid'      => $wc_cust->get_id(),
-				':email'    => $wc_cust->get_email(),
-				':first'    => $wc_cust->get_first_name(),
-				':last'     => $wc_cust->get_last_name(),
-				':phone'    => $wc_cust->get_billing_phone() ?: '',
-				':marketing' => ( $wc_cust->is_paying_customer() ? 1 : 0 ),
-				':addr1'    => $wc_cust->get_billing_address_1() ?: '',
-				':addr2'    => $wc_cust->get_billing_address_2() ?: '',
-				':city'     => $wc_cust->get_billing_city() ?: '',
-				':state'    => $wc_cust->get_billing_state() ?: '',
-				':postal'   => $wc_cust->get_billing_postcode() ?: '',
-				':country'  => $wc_cust->get_billing_country() ?: '',
-				':tags'     => '[]',
-				':created'  => time(),
-				':updated'  => time(),
+				':uid'       => $user->ID,
+				':email'     => $user->user_email,
+				':first'     => $user->first_name ?: '',
+				':last'      => $user->last_name ?: '',
+				':phone'     => $phone,
+				':marketing' => ( $wc_customer && $wc_customer->is_paying_customer() ? 1 : 0 ),
+				':addr1'     => $addr1,
+				':addr2'     => $addr2,
+				':city'      => $city,
+				':state'     => $state,
+				':postal'    => $postal,
+				':country'   => $country,
+				':tags'      => '[]',
+				':created'   => time(),
+				':updated'   => time(),
 			] );
 
 			$count++;
