@@ -36,7 +36,7 @@ final class ImporterPage {
 			</h1>
 
 			<p class="counter-admin__lede">
-				<?php esc_html_e( 'Drop a CSV, paste a URL, or upload a PDF/Markdown/image. Shop detects products, you review, then confirm. Nothing writes to the database until you click Commit.', 'shop' ); ?>
+				<?php esc_html_e( 'Drop a CSV, paste a URL, upload a PDF/Markdown/image, or import everything from WooCommerce. Detect products, review, then confirm. Nothing writes to the database until you click Commit.', 'shop' ); ?>
 			</p>
 
 			<div class="counter-admin__importer" data-counter-importer>
@@ -47,6 +47,24 @@ final class ImporterPage {
 						<h2><?php esc_html_e( 'Source', 'counter' ); ?></h2>
 						<p><?php esc_html_e( 'Pick one. The importer auto-detects from filename or URL — you can pin it manually if needed.', 'counter' ); ?></p>
 					</header>
+
+					<!-- WooCommerce one-click import -->
+					<div class="counter-admin__row">
+						<label><?php esc_html_e( 'Import from WooCommerce', 'counter' ); ?></label>
+						<div>
+							<button type="button" class="button button-primary" id="counter-import-woo" data-counter-import-woo>
+								<?php esc_html_e( 'Import everything from WooCommerce', 'counter' ); ?>
+							</button>
+							<p class="description">
+								<?php esc_html_e( 'One-click import: products, variants, customers, orders. After import, you can safely delete WooCommerce.', 'counter' ); ?>
+							</p>
+							<div id="counter-import-woo-result" style="margin-top: 12px; display: none;">
+								<p><strong id="counter-import-woo-message"></strong></p>
+							</div>
+						</div>
+					</div>
+
+					<div class="counter-admin__row counter-admin__row--or"><?php esc_html_e( '— or —', 'counter' ); ?></div>
 
 					<form data-counter-importer-form>
 						<div class="counter-admin__row">

@@ -60,6 +60,12 @@ final class ImporterController {
 			'callback'            => [ $this, 'commit' ],
 			'permission_callback' => $auth,
 		] );
+
+		register_rest_route( self::NAMESPACE, '/import/woocommerce', [
+			'methods'             => 'POST',
+			'callback'            => [ $this, 'importWooCommerce' ],
+			'permission_callback' => $auth,
+		] );
 	}
 
 	public function options( \WP_REST_Request $req ): \WP_REST_Response {
@@ -188,5 +194,38 @@ final class ImporterController {
 			sourceRef:       (string) ( $j['source_ref'] ?? '' ),
 			issues:          (array) ( $j['issues'] ?? [] ),
 		);
+	}
+
+	/**
+	 * Import everything from WooCommerce: products, customers, orders.
+	 *
+	 * One-click comprehensive import. After this, you can safely delete WooCommerce.
+	 */
+	public function importWooCommerce( \WP_REST_Request $req ): \WP_REST_Response {
+		if ( ! function_exists( 'wc_get_products' ) ) {
+			return new \WP_REST_Response( [
+				'code'    => 'woocommerce_not_active',
+				'message' => 'WooCommerce is not installed or active',
+			], 400 );
+		}
+
+		try {
+			$importer = new \Counter\Services\ComprehensiveWooImporter();
+			$result = $importer->importEverything();
+
+			if ( $result['success'] ) {
+				return new \WP_REST_Response( $result, 200 );
+			} else {
+				return new \WP_REST_Response( [
+					'code'    => 'import_failed',
+					'message' => $result['message'],
+				], 422 );
+			}
+		} catch ( \Throwable $e ) {
+			return new \WP_REST_Response( [
+				'code'    => 'import_error',
+				'message' => $e->getMessage(),
+			], 500 );
+		}
 	}
 }
