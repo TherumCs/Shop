@@ -126,6 +126,14 @@ add_action( 'admin_init', function (): void {
 			} );
 		}
 	}
+
+	// Auto-configure product source: if not explicitly set AND WooCommerce is
+	// detected, default to 'woo' mode (read from WooCommerce products).
+	// Users can override in Counter → Settings if they want native mode instead.
+	$source = get_option( 'counter_product_source' );
+	if ( $source === false && ( defined( 'WC_VERSION' ) || function_exists( 'wc_get_product' ) ) ) {
+		update_option( 'counter_product_source', 'woo' );
+	}
 } );
 
 // Register default service bindings. This is the wiring map — read this to
