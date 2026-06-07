@@ -95,15 +95,18 @@ final class ComprehensiveWooImporter {
 				$country = $wc_customer->get_billing_country() ?: '';
 			}
 
+			// Generate UUID for customer
+			$uuid = function_exists( 'wp_generate_uuid4' ) ? wp_generate_uuid4() : self::generateUUID();
+
 			$stmt = $pdo->prepare( <<<SQL
 				INSERT INTO customers (
-					wp_user_id, email, first_name, last_name,
+					uuid, wp_user_id, email, first_name, last_name,
 					phone, accepts_marketing,
 					address_line1, address_line2, city, state, postal_code, country,
 					tags, orders_count, total_spent_cents, last_order_at,
 					created_at, updated_at
 				) VALUES (
-					:uid, :email, :first, :last,
+					:uuid, :uid, :email, :first, :last,
 					:phone, :marketing,
 					:addr1, :addr2, :city, :state, :postal, :country,
 					:tags, 0, 0, NULL,
@@ -112,6 +115,7 @@ final class ComprehensiveWooImporter {
 			SQL );
 
 			$stmt->execute( [
+				':uuid'      => $uuid,
 				':uid'       => $user->ID,
 				':email'     => $user->user_email,
 				':first'     => $user->first_name ?: '',
@@ -459,5 +463,19 @@ final class ComprehensiveWooImporter {
 		}
 
 		return $count;
+	}
+
+	/**
+	 * Generate a UUID v4 if wp_generate_uuid4() is not available.
+	 */
+	private static function generateUUID(): string {
+		return sprintf(
+			'%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+			mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff ),
+			mt_rand( 0, 0xffff ),
+			mt_rand( 0, 0x0fff ) | 0x4000,
+			mt_rand( 0, 0x3fff ) | 0x8000,
+			mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff )
+		);
 	}
 }
