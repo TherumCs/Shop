@@ -456,7 +456,7 @@ function Tab_Attributes( { p, update } ) {
 				${ err    ? html`<span class="counter-pe-pill counter-pe-pill--err">${ err }</span>` : null }
 			</div>
 			${ groups.length === 0
-				? html`<div class="counter-pe-empty"><p>No attributes are registered yet. Add custom values below to start, or re-open the product to seed the Color + Size defaults.</p></div>`
+				? html`<div class="counter-pe-empty"><p>This product doesn't have any attributes yet. Pick a starter color or size below — saves on click.</p></div>`
 				: groups.map( g => html`<${ AttrGroup } key=${ g.slug } group=${ g } onToggle=${ toggleValue } onCustom=${ addCustom } />` ) }
 		</div>
 	`;

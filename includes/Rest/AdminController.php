@@ -1135,6 +1135,8 @@ final class AdminController {
 	 */
 	private function attributesFor( int $product_id ): array {
 		$this->ensureCoreAttributes();
+		$this->backfillVariantAttributesFromWoo( $product_id );
+
 		$pdo = DB::pdo();
 
 		$attrs = $pdo->query(
@@ -1148,13 +1150,9 @@ final class AdminController {
 			  ORDER BY position ASC, id ASC'
 		);
 
-		$enabled_stmt = $pdo->prepare(
-			'SELECT 1 FROM product_attributes WHERE product_id = :pid AND attribute_id = :aid'
-		);
-
-		// One round-trip per attribute to find which values this product
-		// actually has across its variants — covers products that were
-		// imported with variants but never had product_attributes rows.
+		// Values actually used by this product's variants. With the WC
+		// backfill above, this is now populated even for imports that
+		// only ever lived in wp_postmeta.
 		$selected_stmt = $pdo->prepare(
 			'SELECT DISTINCT vv.attribute_value_id
 			   FROM variant_attribute_values vv
@@ -1167,8 +1165,16 @@ final class AdminController {
 		foreach ( $attrs as $a ) {
 			$aid = (int) $a['id'];
 
+			$selected_stmt->execute( [ ':pid' => $product_id, ':aid' => $aid ] );
+			$selected = array_map( 'intval', $selected_stmt->fetchAll( \PDO::FETCH_COLUMN ) );
+
+			// Filter to "what this product comes in." Empty groups are
+			// dropped entirely so the merchant doesn't scroll past 8
+			// attributes when the product only uses 2.
+			if ( empty( $selected ) ) continue;
+
 			$values_stmt->execute( [ ':aid' => $aid ] );
-			$values = array_map( fn( $r ) => [
+			$all_values = array_map( fn( $r ) => [
 				'id'        => (int) $r['id'],
 				'slug'      => (string) $r['slug'],
 				'value'     => (string) $r['value'],
@@ -1176,11 +1182,9 @@ final class AdminController {
 				'position'  => (int) $r['position'],
 			], $values_stmt->fetchAll() );
 
-			$selected_stmt->execute( [ ':pid' => $product_id, ':aid' => $aid ] );
-			$selected = array_map( 'intval', $selected_stmt->fetchAll( \PDO::FETCH_COLUMN ) );
-
-			$enabled_stmt->execute( [ ':pid' => $product_id, ':aid' => $aid ] );
-			$enabled = (bool) $enabled_stmt->fetchColumn();
+			// Render only the selected values; the Custom row at the
+			// bottom of each section still lets the merchant add more.
+			$values = array_values( array_filter( $all_values, fn( $v ) => in_array( $v['id'], $selected, true ) ) );
 
 			$out[] = [
 				'slug'               => (string) $a['slug'],
@@ -1188,11 +1192,138 @@ final class AdminController {
 				'type'               => (string) $a['type'],
 				'values'             => $values,
 				'selected_value_ids' => $selected,
-				'enabled'            => $enabled || ! empty( $selected ),
+				'enabled'            => true,
 			];
 		}
 
+		// Starter fallback — product has no attribute selections yet
+		// (newly created, or imported without variant attribute meta).
+		// Return Color + Size groups with their full value sets so the
+		// merchant has something tappable instead of an empty tab.
+		if ( empty( $out ) ) {
+			foreach ( [ 'color', 'size' ] as $starter_slug ) {
+				$attr = null;
+				foreach ( $attrs as $a ) {
+					if ( $a['slug'] === $starter_slug ) { $attr = $a; break; }
+				}
+				if ( ! $attr ) continue;
+
+				$values_stmt->execute( [ ':aid' => (int) $attr['id'] ] );
+				$values = array_map( fn( $r ) => [
+					'id'        => (int) $r['id'],
+					'slug'      => (string) $r['slug'],
+					'value'     => (string) $r['value'],
+					'color_hex' => $r['color_hex'] !== null ? (string) $r['color_hex'] : null,
+					'position'  => (int) $r['position'],
+				], $values_stmt->fetchAll() );
+
+				$out[] = [
+					'slug'               => (string) $attr['slug'],
+					'name'               => (string) $attr['name'],
+					'type'               => (string) $attr['type'],
+					'values'             => $values,
+					'selected_value_ids' => [],
+					'enabled'            => false,
+				];
+			}
+		}
+
 		return $out;
+	}
+
+	/**
+	 * Populate `variant_attribute_values` for a product when SQLite has
+	 * variants but no join rows. Reads WooCommerce variation post meta
+	 * (`attribute_pa_color`, `attribute_pa_size`, etc) and writes the
+	 * corresponding (variant_id, attribute_value_id) pairs.
+	 *
+	 * Idempotent — short-circuits the moment one join row exists, and
+	 * uses INSERT OR IGNORE for everything it writes.
+	 */
+	private function backfillVariantAttributesFromWoo( int $product_id ): void {
+		if ( ! function_exists( 'wc_get_product' ) ) return;
+		$pdo = DB::pdo();
+
+		// Skip if join table already has anything for this product.
+		$probe = $pdo->prepare(
+			'SELECT 1
+			   FROM variant_attribute_values vv
+			   JOIN product_variants v ON v.id = vv.variant_id
+			  WHERE v.product_id = :pid
+			  LIMIT 1'
+		);
+		$probe->execute( [ ':pid' => $product_id ] );
+		if ( $probe->fetchColumn() ) return;
+
+		// Map attribute slug → id, once. We accept either bare slugs
+		// (`color`, `size`) or WC's `pa_` prefix (`pa_color`).
+		$attr_map = [];
+		foreach ( $pdo->query( 'SELECT id, slug FROM attributes' )->fetchAll() as $row ) {
+			$attr_map[ (string) $row['slug'] ] = (int) $row['id'];
+		}
+
+		$variants = $pdo->prepare( 'SELECT id FROM product_variants WHERE product_id = :pid' );
+		$variants->execute( [ ':pid' => $product_id ] );
+		$variant_ids = array_map( 'intval', $variants->fetchAll( \PDO::FETCH_COLUMN ) );
+		if ( ! $variant_ids ) return;
+
+		$ins_join = $pdo->prepare(
+			'INSERT OR IGNORE INTO variant_attribute_values (variant_id, attribute_value_id) VALUES (:vid, :avid)'
+		);
+
+		foreach ( $variant_ids as $vid ) {
+			$wc_var = wc_get_product( $vid );
+			if ( ! $wc_var || ! $wc_var->is_type( 'variation' ) ) continue;
+
+			foreach ( $wc_var->get_attributes() as $tax => $value ) {
+				if ( $value === '' ) continue;
+				$attr_slug = preg_replace( '/^pa_/', '', (string) $tax );
+				$aid       = $attr_map[ $attr_slug ] ?? null;
+				if ( ! $aid ) continue;
+
+				$val_id = $this->ensureAttributeValue( $aid, (string) $value, (string) $tax );
+				if ( ! $val_id ) continue;
+
+				$ins_join->execute( [ ':vid' => $vid, ':avid' => $val_id ] );
+			}
+		}
+	}
+
+	/**
+	 * Resolve an attribute value slug to its row id, creating the row
+	 * if it doesn't exist. Pulls the human-readable name + color hex
+	 * from the WC product taxonomy term when one's available.
+	 */
+	private function ensureAttributeValue( int $attribute_id, string $slug, string $taxonomy ): int {
+		$pdo  = DB::pdo();
+		$find = $pdo->prepare( 'SELECT id FROM attribute_values WHERE attribute_id = :aid AND slug = :slug' );
+		$find->execute( [ ':aid' => $attribute_id, ':slug' => $slug ] );
+		$existing = (int) $find->fetchColumn();
+		if ( $existing ) return $existing;
+
+		// Resolve display name + color hex from the WC term if present.
+		$display = ucwords( str_replace( '-', ' ', $slug ) );
+		$hex     = null;
+		if ( taxonomy_exists( $taxonomy ) ) {
+			$term = get_term_by( 'slug', $slug, $taxonomy );
+			if ( $term && ! is_wp_error( $term ) ) {
+				$display = (string) $term->name;
+				// Common color-attribute hex meta keys across WC + plugins.
+				foreach ( [ 'product_attribute_color', 'color_picker', 'color', 'pa_color_color' ] as $key ) {
+					$candidate = get_term_meta( $term->term_id, $key, true );
+					if ( $candidate ) { $hex = (string) $candidate; break; }
+				}
+			}
+		}
+
+		$pdo->prepare(
+			'INSERT INTO attribute_values (attribute_id, slug, value, color_hex, position)
+			      VALUES (:aid, :slug, :val, :hex, COALESCE(
+			           (SELECT MAX(position)+1 FROM attribute_values WHERE attribute_id = :aid), 100
+			      ))'
+		)->execute( [ ':aid' => $attribute_id, ':slug' => $slug, ':val' => $display, ':hex' => $hex ] );
+
+		return (int) $pdo->lastInsertId();
 	}
 
 	/**
