@@ -168,7 +168,7 @@ function Drawer() {
 	if ( ! openId ) return null;
 
 	return html`
-		<div class="counter-pe-overlay" onClick=${ close } />
+		<div class="counter-pe-overlay" onClick=${ close }>
 		<aside class="counter-pe" onClick=${ e => e.stopPropagation() }>
 			<header class="counter-pe__head">
 				<div class="counter-pe__head-l">
@@ -221,6 +221,7 @@ function Drawer() {
 				</button>
 			</footer>
 		</aside>
+		</div>
 	`;
 }
 
