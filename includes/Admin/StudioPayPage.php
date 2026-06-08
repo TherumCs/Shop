@@ -27,7 +27,7 @@ final class StudioPayPage {
 				<span class="counter-admin__mark">T</span>
 				Payments
 				<?php if ( isset( $_GET['connected'] ) ) : ?>
-					<span class="counter-admin__chip is-active">Connected: <?php echo esc_html( (string) $_GET['connected'] ); ?></span>
+					<span class="counter-admin__chip is-active">Connected: <?php echo esc_html( sanitize_key( (string) $_GET['connected'] ) ); ?></span>
 				<?php endif; ?>
 			</h1>
 			<?php SectionTabs::render( 'counter-studio-pay' ); ?>

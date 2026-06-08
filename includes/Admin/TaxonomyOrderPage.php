@@ -67,7 +67,7 @@ abstract class TaxonomyOrderPage {
 
 			<h1 class="counter-admin__title">
 				<span class="counter-admin__mark">T</span>
-				<?php esc_html_e( 'Organization', 'counter' ); ?>
+				<?php echo esc_html( $this->getPageTitle() ); ?>
 				<span class="counter-admin__version">v<?php echo esc_html( COUNTER_VERSION ); ?></span>
 			</h1>
 			<?php SectionTabs::render( sanitize_key( (string) ( $_GET['page'] ?? '' ) ) ); ?>

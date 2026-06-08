@@ -20,7 +20,7 @@ final class UpdatesPage {
 		?>
 		<div class="wrap counter-admin">
 			<h1 class="counter-admin__title">
-				<span class="counter-admin__mark">T</span> Manage Data
+				<span class="counter-admin__mark">T</span> Updates
 			</h1>
 			<?php SectionTabs::render( 'counter-updates' ); ?>
 			<div

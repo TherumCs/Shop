@@ -23,7 +23,7 @@ final class ProductsPage {
 		<div class="wrap counter-admin">
 			<h1 class="counter-admin__title">
 				<span class="counter-admin__mark">T</span>
-				<?php esc_html_e( 'Commerce', 'counter' ); ?>
+				<?php esc_html_e( 'Products', 'counter' ); ?>
 			</h1>
 			<?php SectionTabs::render( 'counter-products' ); ?>
 

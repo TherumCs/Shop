@@ -37,7 +37,7 @@ final class ImportExportPage {
 		<div class="wrap counter-admin">
 			<h1 class="counter-admin__title">
 				<span class="counter-admin__mark">T</span>
-				<?php esc_html_e( 'Manage Data', 'counter' ); ?>
+				<?php esc_html_e( 'Import / Export', 'counter' ); ?>
 			</h1>
 			<?php SectionTabs::render( 'counter-import' ); ?>
 

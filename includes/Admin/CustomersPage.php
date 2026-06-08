@@ -24,7 +24,7 @@ final class CustomersPage {
 		?>
 		<div class="wrap counter-admin">
 			<h1 class="counter-admin__title">
-				<span class="counter-admin__mark">T</span> Commerce
+				<span class="counter-admin__mark">T</span> Customers
 			</h1>
 			<?php SectionTabs::render( 'counter-customers' ); ?>
 			<nav class="counter-admin__tabs counter-admin__tabs--sub">

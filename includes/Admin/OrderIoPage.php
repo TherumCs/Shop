@@ -17,7 +17,7 @@ final class OrderIoPage {
 		?>
 		<div class="wrap counter-admin">
 			<h1 class="counter-admin__title">
-				<span class="counter-admin__mark">T</span> Manage Data
+				<span class="counter-admin__mark">T</span> Order Import / Export
 			</h1>
 			<?php SectionTabs::render( 'counter-import' ); ?>
 			<?php $this->renderBody(); ?>

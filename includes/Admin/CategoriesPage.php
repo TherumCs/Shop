@@ -41,7 +41,7 @@ final class CategoriesPage {
 		<div class="wrap counter-admin">
 			<h1 class="counter-admin__title">
 				<span class="counter-admin__mark">T</span>
-				<?php esc_html_e( 'Commerce', 'counter' ); ?>
+				<?php esc_html_e( 'Categories', 'counter' ); ?>
 			</h1>
 			<?php SectionTabs::render( 'counter-categories' ); ?>
 
