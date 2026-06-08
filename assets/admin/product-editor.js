@@ -524,25 +524,59 @@ function Tab_Media( { p, update } ) {
 		} ).finally( () => setSaving( false ) );
 	}
 
+	// Normalize a wp.media attachment into the shape we persist + render.
+	// Captures mime so we can branch on image vs video at render time.
+	// Animated formats (gif, webp, apng) come back as type=image and are
+	// rendered with <img> — the browser handles animation natively.
+	function pickFromAttachment( a ) {
+		const attrs = a.attributes || {};
+		return {
+			id:            a.id,
+			attachment_id: a.id,
+			url:           attrs.url,
+			mime:          attrs.mime || '',
+			type:          attrs.type || ( ( attrs.mime || '' ).split( '/' )[ 0 ] || 'image' ),
+		};
+	}
+
 	function openPicker( multiple, onSelect ) {
 		if ( ! window.wp || ! window.wp.media ) {
 			setErr( 'WordPress media library unavailable. Reload the page.' );
 			return;
 		}
 		const frame = window.wp.media( {
-			title:    multiple ? 'Pick gallery images' : 'Pick a primary image',
+			title:    multiple ? 'Pick gallery media (images + videos)' : 'Pick a featured image or video',
 			button:   { text: 'Use selection' },
 			multiple,
-			library:  { type: 'image' },
+			// type filter accepts an array — allows images (incl. gif/webp/apng)
+			// AND videos (mp4/webm/mov) from the WP media library.
+			library:  { type: [ 'image', 'video' ] },
 		} );
 		frame.on( 'select', () => {
 			const sel = frame.state().get( 'selection' );
 			onSelect( multiple
-				? sel.map( a => ( { id: a.id, attachment_id: a.id, url: a.attributes.url } ) )
-				: ( () => { const a = sel.first(); return { id: a.id, url: a.attributes.url }; } )()
+				? sel.map( pickFromAttachment )
+				: pickFromAttachment( sel.first() )
 			);
 		} );
 		frame.open();
+	}
+
+	// Decide whether a media item should render as <video> or <img>.
+	// Falls back to URL extension when mime isn't on the record (e.g.
+	// re-rendering from server gallery state that only has url + id).
+	function isVideo( m ) {
+		if ( ! m ) return false;
+		if ( m.type === 'video' ) return true;
+		if ( ( m.mime || '' ).startsWith( 'video/' ) ) return true;
+		const ext = ( m.url || '' ).split( '?' )[ 0 ].split( '.' ).pop().toLowerCase();
+		return [ 'mp4', 'webm', 'mov', 'm4v', 'ogv' ].includes( ext );
+	}
+
+	function MediaThumb( { item, className } ) {
+		return isVideo( item )
+			? html`<video class=${ className } src=${ item.url } muted autoplay loop playsinline />`
+			: html`<img    class=${ className } src=${ item.url } alt=${ item.alt || '' } />`;
 	}
 
 	function pickPrimary() {
@@ -577,14 +611,14 @@ function Tab_Media( { p, update } ) {
 		<div class="counter-pe-rows">
 			<div class="counter-pe-media-block">
 				<div class="counter-pe-media-block__head">
-					<h3>Primary image</h3>
+					<h3>Featured image or video</h3>
 					${ saving ? html`<span class="counter-pe-pill">Saving…</span>` : null }
 					${ err    ? html`<span class="counter-pe-pill counter-pe-pill--err">${ err }</span>` : null }
 				</div>
 				${ primary
 					? html`
 						<div class="counter-pe-media-primary">
-							<img src=${ primary.url } alt="" />
+							<${ MediaThumb } item=${ primary } />
 							<div class="counter-pe-media-actions">
 								<button type="button" class="button" onClick=${ pickPrimary }>Replace</button>
 								<button type="button" class="button button-link-delete" onClick=${ clearPrimary }>Remove</button>
@@ -593,7 +627,8 @@ function Tab_Media( { p, update } ) {
 					`
 					: html`
 						<div class="counter-pe-media-empty">
-							<button type="button" class="button button-primary" onClick=${ pickPrimary }>Choose image</button>
+							<button type="button" class="button button-primary" onClick=${ pickPrimary }>Choose media</button>
+							<p class="counter-pe-media-hint">JPG · PNG · WebP · GIF · MP4 · WebM</p>
 						</div>
 					`
 				}
@@ -601,22 +636,23 @@ function Tab_Media( { p, update } ) {
 
 			<div class="counter-pe-media-block">
 				<div class="counter-pe-media-block__head">
-					<h3>Gallery <span class="counter-pe-media-count">${ gallery.length }</span></h3>
-					<button type="button" class="button" onClick=${ pickGallery }>Add images</button>
+					<h3>Image / video gallery <span class="counter-pe-media-count">${ gallery.length }</span></h3>
+					<button type="button" class="button" onClick=${ pickGallery }>Add media</button>
 				</div>
 				${ gallery.length
 					? html`
 						<div class="counter-pe-gallery">
 							${ gallery.map( g => html`
 								<div class="counter-pe-gallery__item" key=${ g.id || g.attachment_id }>
-									<img src=${ g.url } alt=${ g.alt || '' } />
+									<${ MediaThumb } item=${ g } />
+									${ isVideo( g ) ? html`<span class="counter-pe-gallery__badge">▶</span>` : null }
 									<button type="button" class="counter-pe-gallery__rm" title="Remove"
 										onClick=${ () => removeFromGallery( g.attachment_id || g.id ) }>×</button>
 								</div>
 							` ) }
 						</div>
 					`
-					: html`<p class="counter-pe-media-hint">No gallery images yet.</p>`
+					: html`<p class="counter-pe-media-hint">No gallery media yet. Mix images and videos as needed.</p>`
 				}
 			</div>
 		</div>

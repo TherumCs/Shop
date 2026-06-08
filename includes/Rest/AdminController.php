@@ -385,7 +385,7 @@ final class AdminController {
 				'downloadable' => (bool) ( $row['is_digital'] ?? false ),
 			],
 			'images' => [
-				'primary' => $primaryId ? [ 'id' => $primaryId, 'url' => (string) wp_get_attachment_image_url( $primaryId, 'medium' ) ] : null,
+				'primary' => $primaryId ? $this->mediaItem( (int) $primaryId ) : null,
 				'gallery' => $this->galleryFor( (int) $row['id'] ),
 			],
 			'variants'   => $this->variantsFor( (int) $row['id'] ),
@@ -806,14 +806,44 @@ final class AdminController {
 		$stmt->execute( [ ':pid' => $product_id ] );
 		$out = [];
 		foreach ( $stmt->fetchAll() as $row ) {
-			$out[] = [
-				'id'            => (int) $row['id'],
-				'attachment_id' => (int) $row['attachment_id'],
-				'url'           => (string) wp_get_attachment_image_url( (int) $row['attachment_id'], 'thumbnail' ),
-				'alt'           => (string) ( $row['alt_text'] ?? '' ),
-			];
+			$item = $this->mediaItem( (int) $row['attachment_id'] );
+			$item['id']  = (int) $row['id'];
+			$item['alt'] = (string) ( $row['alt_text'] ?? $item['alt'] ?? '' );
+			$out[] = $item;
 		}
 		return $out;
+	}
+
+	/**
+	 * Resolve an attachment id into a media-item record that handles both
+	 * images and videos. wp_get_attachment_image_url() returns false on
+	 * non-image attachments, so we fall through to wp_get_attachment_url()
+	 * for videos (and any other non-image type) and surface the mime so
+	 * the client can branch on <img> vs <video> at render time.
+	 *
+	 * @return array{ id:int, attachment_id:int, url:string, mime:string, type:string, alt:string }
+	 */
+	private function mediaItem( int $attachment_id ): array {
+		$mime = (string) get_post_mime_type( $attachment_id );
+		$type = $mime ? explode( '/', $mime )[0] : 'image';
+
+		// Prefer the thumbnail variant for images (lighter payload). For
+		// videos there is no image variant — use the full attachment URL.
+		$url = $type === 'image'
+			? (string) wp_get_attachment_image_url( $attachment_id, 'thumbnail' )
+			: (string) wp_get_attachment_url( $attachment_id );
+		if ( $url === '' ) {
+			$url = (string) wp_get_attachment_url( $attachment_id );
+		}
+
+		return [
+			'id'            => 0, // overwritten by caller (the product_images row id)
+			'attachment_id' => $attachment_id,
+			'url'           => $url,
+			'mime'          => $mime,
+			'type'          => $type,
+			'alt'           => (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ),
+		];
 	}
 
 	/**
@@ -923,7 +953,7 @@ final class AdminController {
 		return new \WP_REST_Response( [
 			'ok'      => true,
 			'images'  => [
-				'primary' => $primary_id ? [ 'id' => $primary_id, 'url' => (string) wp_get_attachment_image_url( $primary_id, 'medium' ) ] : null,
+				'primary' => $primary_id ? $this->mediaItem( (int) $primary_id ) : null,
 				'gallery' => $this->galleryFor( $product_id ),
 			],
 		], 200 );
