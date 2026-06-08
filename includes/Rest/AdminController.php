@@ -1046,6 +1046,14 @@ final class AdminController {
 	// ─── Product attribute selections ────────────────────────────────────
 
 	/**
+	 * Attribute slugs the editor surfaces. Other slugs may exist in the
+	 * `attributes` table (e.g. brand/materials/style imported from WC)
+	 * but they're filtered out of the editor view and skipped during
+	 * the WC backfill. Keeps the Attributes tab focused on Color + Size.
+	 */
+	private const ATTRIBUTE_ALLOWLIST = [ 'color', 'size' ];
+
+	/**
 	 * Default Color + Size palettes seeded the first time the editor's
 	 * Attributes tab is opened, if those attributes don't already exist.
 	 * Keeps the merchant from staring at an empty UI on a fresh install.
@@ -1139,9 +1147,17 @@ final class AdminController {
 
 		$pdo = DB::pdo();
 
-		$attrs = $pdo->query(
-			'SELECT id, slug, name, type FROM attributes ORDER BY position ASC, id ASC'
-		)->fetchAll();
+		// Allowlist-only — keeps brand / materials / style / textile /
+		// size-shoes etc out of the editor even when WC imported them.
+		$placeholders = implode( ',', array_fill( 0, count( self::ATTRIBUTE_ALLOWLIST ), '?' ) );
+		$stmt = $pdo->prepare(
+			"SELECT id, slug, name, type
+			   FROM attributes
+			  WHERE slug IN ( $placeholders )
+			  ORDER BY position ASC, id ASC"
+		);
+		$stmt->execute( self::ATTRIBUTE_ALLOWLIST );
+		$attrs = $stmt->fetchAll();
 
 		$values_stmt = $pdo->prepare(
 			'SELECT id, slug, value, color_hex, position
@@ -1255,11 +1271,15 @@ final class AdminController {
 		$probe->execute( [ ':pid' => $product_id ] );
 		if ( $probe->fetchColumn() ) return;
 
-		// Map attribute slug → id, once. We accept either bare slugs
-		// (`color`, `size`) or WC's `pa_` prefix (`pa_color`).
+		// Map attribute slug → id, once. Filtered to the editor allowlist
+		// so the backfill never writes join rows for brand / materials /
+		// style / etc — those attributes aren't surfaced anywhere in the
+		// UI and writing them would just be dead weight.
 		$attr_map = [];
 		foreach ( $pdo->query( 'SELECT id, slug FROM attributes' )->fetchAll() as $row ) {
-			$attr_map[ (string) $row['slug'] ] = (int) $row['id'];
+			$slug = (string) $row['slug'];
+			if ( ! in_array( $slug, self::ATTRIBUTE_ALLOWLIST, true ) ) continue;
+			$attr_map[ $slug ] = (int) $row['id'];
 		}
 
 		$variants = $pdo->prepare( 'SELECT id FROM product_variants WHERE product_id = :pid' );
