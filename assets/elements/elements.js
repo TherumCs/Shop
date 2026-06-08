@@ -18,7 +18,7 @@
 	'use strict';
 
 	var cfg  = window.CounterCartConfig || {};
-	var REST = ( cfg.rest || '/wp-json/' ) + 'shop/v1/';
+	var REST = ( cfg.rest || '/wp-json/' ) + 'counter/v1/';
 
 	// ─── Gallery ────────────────────────────────────────────────────────────
 	document.addEventListener( 'click', function ( e ) {

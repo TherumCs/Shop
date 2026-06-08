@@ -30,7 +30,11 @@ final class SquareProvider implements PaymentProvider {
 	public function displayName(): string { return 'Square'; }
 
 	public function supportedMethods(): array {
-		return [ 'card', 'cashapp', 'afterpay' ];
+		// Square's Online Checkout Payment Links surface all of these
+		// when the merchant has them enabled in the Square dashboard.
+		// Wallets (Apple/Google Pay) are paid through Square — funds
+		// hit the Square balance directly, no Stripe involvement.
+		return [ 'card', 'apple_pay', 'google_pay', 'cashapp', 'afterpay' ];
 	}
 
 	public function isConnected(): bool {

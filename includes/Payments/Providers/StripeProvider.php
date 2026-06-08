@@ -105,12 +105,116 @@ final class StripeProvider implements PaymentProvider {
 	}
 
 	public function payout( Money $amount, bool $instant, string $idempotencyKey ): string {
+		// Optional explicit destination — if the merchant has picked a
+		// specific debit card (e.g. their Square Debit Mastercard) as the
+		// payout target, route there. Otherwise Stripe uses the account's
+		// default external account.
+		$destination = (string) get_option( 'counter_studio_pay_payout_destination', '' );
+
 		$body = $this->call( 'POST', 'payouts', array_filter( [
-			'amount'   => $amount->amount,
-			'currency' => strtolower( $amount->currency ),
-			'method'   => $instant ? 'instant' : 'standard',
+			'amount'      => $amount->amount,
+			'currency'    => strtolower( $amount->currency ),
+			'method'      => $instant ? 'instant' : 'standard',
+			'destination' => $destination ?: null,
 		] ), $idempotencyKey );
 		return (string) ( $body['id'] ?? '' );
+	}
+
+	/**
+	 * List external payout accounts attached to this Stripe account.
+	 * Returns cards and bank accounts in a uniform shape so the admin UI
+	 * can render a single "pick a destination" list. Skips reverse-lookups
+	 * — Stripe returns everything we need in one call.
+	 *
+	 * Failure mode: returns [] instead of throwing, so the Payouts tab
+	 * still renders if the merchant hasn't connected Stripe yet.
+	 *
+	 * @return list<array{ id:string, type:string, brand:string, last4:string, default:bool, label:string }>
+	 */
+	public function listExternalAccounts(): array {
+		if ( ! $this->isConnected() ) return [];
+
+		$path = $this->accountScopedPath( 'external_accounts' );
+		if ( $path === null ) return [];
+
+		$out = [];
+		foreach ( [ 'card', 'bank_account' ] as $object ) {
+			try {
+				$res = $this->call( 'GET', $path, [ 'object' => $object, 'limit' => 50 ] );
+			} catch ( \Throwable $e ) {
+				continue;
+			}
+			foreach ( (array) ( $res['data'] ?? [] ) as $row ) {
+				$out[] = $object === 'card'
+					? [
+						'id'      => (string) ( $row['id'] ?? '' ),
+						'type'    => 'card',
+						'brand'   => (string) ( $row['brand'] ?? '' ),
+						'last4'   => (string) ( $row['last4'] ?? '' ),
+						'default' => (bool)   ( $row['default_for_currency'] ?? false ),
+						'label'   => trim( ( $row['brand'] ?? 'Card' ) . ' ••••' . ( $row['last4'] ?? '' ) ),
+					]
+					: [
+						'id'      => (string) ( $row['id'] ?? '' ),
+						'type'    => 'bank',
+						'brand'   => (string) ( $row['bank_name'] ?? 'Bank' ),
+						'last4'   => (string) ( $row['last4'] ?? '' ),
+						'default' => (bool)   ( $row['default_for_currency'] ?? false ),
+						'label'   => trim( ( $row['bank_name'] ?? 'Bank' ) . ' ••••' . ( $row['last4'] ?? '' ) ),
+					];
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Attach a debit card to this Stripe account using a Stripe.js token.
+	 * Returns the new card id ("card_xxx") so the UI can immediately mark
+	 * it as default.
+	 *
+	 * Used by the "Add Square Debit Mastercard" form on the Payouts tab.
+	 *
+	 * @throws \RuntimeException on Stripe API failure
+	 */
+	public function attachExternalAccount( string $token ): string {
+		$path = $this->accountScopedPath( 'external_accounts' );
+		if ( $path === null ) throw new \RuntimeException( 'Stripe account id unavailable.' );
+
+		$body = $this->call( 'POST', $path, [
+			'external_account' => $token,
+		] );
+		return (string) ( $body['id'] ?? '' );
+	}
+
+	/**
+	 * Build an `accounts/{id}/{suffix}` path. For Connect mode the id is
+	 * the connected `acct_*` we OAuth'd in. For BYO mode we fetch it from
+	 * `/v1/account` (cached for the request).
+	 */
+	private function accountScopedPath( string $suffix ): ?string {
+		$id = $this->connectAccountId();
+		if ( $id === '' ) {
+			static $cached = null;
+			if ( $cached === null ) {
+				try {
+					$res = $this->call( 'GET', 'account', [] );
+					$cached = (string) ( $res['id'] ?? '' );
+				} catch ( \Throwable $e ) {
+					return null;
+				}
+			}
+			$id = $cached;
+		}
+		return $id === '' ? null : 'accounts/' . rawurlencode( $id ) . '/' . $suffix;
+	}
+
+	/**
+	 * The publishable key the Payouts tab needs to load Stripe.js and
+	 * tokenize the debit card client-side. Falls back to empty string so
+	 * the UI can hide the "Add card" form if it isn't configured yet.
+	 */
+	public function publishableKey(): string {
+		return (string) get_option( 'counter_stripe_publishable_key', '' );
 	}
 
 	public function verifyWebhook( string $rawBody, array $headers ): ?array {

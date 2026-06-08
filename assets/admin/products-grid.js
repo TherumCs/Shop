@@ -39,6 +39,10 @@
 		rows:     [],
 		selected: new Set(),
 		lastIdx:  null,
+		view:     ( function () {
+			try { return localStorage.getItem( 'counter:products:view' ) === 'grid' ? 'grid' : 'list'; }
+			catch ( _ ) { return 'list'; }
+		} )(),
 	};
 
 	// Editable column config — what type of input to render, how to serialize
@@ -64,6 +68,32 @@
 	var selCountEl  = root.querySelector( '[data-counter-grid-selected]' );
 	var bulkAct     = root.querySelector( '[data-counter-grid-bulk-action]' );
 	var bulkRun     = root.querySelector( '[data-counter-grid-bulk-run]' );
+	var viewBtns    = root.querySelectorAll( '[data-counter-view]' );
+	var gridScroll  = root.querySelector( '.counter-grid__scroll' );
+	// Card grid container — created lazily, lives next to the table scroller
+	// so the toolbar/pager don't have to know about it.
+	var cardsEl = document.createElement( 'div' );
+	cardsEl.className = 'counter-grid__cards';
+	cardsEl.hidden = true;
+	gridScroll.parentNode.insertBefore( cardsEl, gridScroll.nextSibling );
+
+	function applyView() {
+		var isGrid = state.view === 'grid';
+		gridScroll.hidden = isGrid;
+		cardsEl.hidden    = ! isGrid;
+		viewBtns.forEach( function ( b ) {
+			b.classList.toggle( 'is-active', b.getAttribute( 'data-counter-view' ) === state.view );
+		} );
+	}
+	viewBtns.forEach( function ( b ) {
+		b.addEventListener( 'click', function () {
+			state.view = b.getAttribute( 'data-counter-view' );
+			try { localStorage.setItem( 'counter:products:view', state.view ); } catch ( _ ) {}
+			applyView();
+			render();
+		} );
+	} );
+	applyView();
 
 	// ─── Fetch + render ─────────────────────────────────────────────────────
 	function load() {
@@ -94,8 +124,40 @@
 
 		if ( state.rows.length === 0 ) {
 			tbody.innerHTML = '<tr class="counter-grid__empty"><td colspan="10">No products. <a href="?page=counter-import">Import some.</a></td></tr>';
+			cardsEl.innerHTML = '<div class="counter-grid__empty">No products. <a href="?page=counter-import">Import some.</a></div>';
 			return;
 		}
+
+		// Card view shares state + selection with the table view.
+		cardsEl.innerHTML = state.rows.map( function ( r ) {
+			var isSel = state.selected.has( r.id );
+			var price = r.price !== null && r.price !== undefined ? '$' + ( r.price / 100 ).toFixed( 2 ) : '—';
+			var stock = r.stock_qty !== null && r.stock_qty !== undefined ? r.stock_qty : '—';
+			var img   = r.image_url
+				? '<img src="' + esc( r.image_url ) + '" alt="" />'
+				: '<div class="counter-grid__card-noimg"></div>';
+			return (
+				'<article class="counter-grid__card ' + ( isSel ? 'is-selected' : '' ) + '" data-id="' + r.id + '">' +
+					'<label class="counter-grid__card-check">' +
+						'<input type="checkbox" data-toggle="' + r.id + '" ' + ( isSel ? 'checked' : '' ) + ' />' +
+					'</label>' +
+					'<div class="counter-grid__card-media" data-counter-open-product="' + r.id + '" title="Open editor">' + img + '</div>' +
+					'<div class="counter-grid__card-body">' +
+						'<div class="counter-grid__card-title">' + esc( r.title || '' ) + '</div>' +
+						'<div class="counter-grid__card-meta">' + statusPill( r.status ) + '<span class="counter-grid__card-price">' + esc( price ) + '</span></div>' +
+						'<div class="counter-grid__card-sub">' +
+							'<span>Stock: ' + esc( String( stock ) ) + '</span>' +
+							'<span>SKU: ' + esc( r.sku || '—' ) + '</span>' +
+						'</div>' +
+					'</div>' +
+					'<div class="counter-grid__card-actions">' +
+						'<button class="button button-small" data-counter-open-product="' + r.id + '" title="Edit">Edit</button>' +
+						'<button class="button button-small" data-counter-duplicate-product="' + r.id + '" title="Duplicate">Duplicate</button>' +
+						'<button class="button button-small button-link-delete" data-counter-delete-product="' + r.id + '" title="Delete">Delete</button>' +
+					'</div>' +
+				'</article>'
+			);
+		} ).join( '' );
 
 		tbody.innerHTML = state.rows.map( function ( r ) {
 			var isSel = state.selected.has( r.id );
@@ -213,7 +275,7 @@
 	// ─── Open drawer (img cell or "Edit" button) ──────────────────────────
 	// Delegated to the table so newly-rendered rows pick it up automatically.
 	// The product editor module listens for `counter:open-product` on document.
-	tbody.addEventListener( 'click', function ( e ) {
+	root.addEventListener( 'click', function ( e ) {
 		var btn = e.target.closest( '[data-counter-open-product]' );
 		if ( ! btn ) return;
 		var id = parseInt( btn.getAttribute( 'data-counter-open-product' ), 10 );
@@ -222,7 +284,7 @@
 	} );
 
 	// ─── View Live button ───────────────────────────────────────────────────
-	tbody.addEventListener( 'click', function ( e ) {
+	root.addEventListener( 'click', function ( e ) {
 		var btn = e.target.closest( '[data-counter-view-product]' );
 		if ( ! btn ) return;
 		var id = parseInt( btn.getAttribute( 'data-counter-view-product' ), 10 );
@@ -234,7 +296,7 @@
 	} );
 
 	// ─── Duplicate button ───────────────────────────────────────────────────
-	tbody.addEventListener( 'click', function ( e ) {
+	root.addEventListener( 'click', function ( e ) {
 		var btn = e.target.closest( '[data-counter-duplicate-product]' );
 		if ( ! btn ) return;
 		var id = parseInt( btn.getAttribute( 'data-counter-duplicate-product' ), 10 );
@@ -243,7 +305,7 @@
 	} );
 
 	// ─── Delete button ──────────────────────────────────────────────────────
-	tbody.addEventListener( 'click', function ( e ) {
+	root.addEventListener( 'click', function ( e ) {
 		var btn = e.target.closest( '[data-counter-delete-product]' );
 		if ( ! btn ) return;
 		var id = parseInt( btn.getAttribute( 'data-counter-delete-product' ), 10 );
@@ -252,7 +314,7 @@
 	} );
 
 	// ─── Selection (with shift-range) ───────────────────────────────────────
-	tbody.addEventListener( 'click', function ( e ) {
+	root.addEventListener( 'click', function ( e ) {
 		var cb = e.target.closest( '[data-toggle]' );
 		if ( ! cb ) return;
 		var id = parseInt( cb.getAttribute( 'data-toggle' ), 10 );

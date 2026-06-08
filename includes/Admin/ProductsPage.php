@@ -23,8 +23,9 @@ final class ProductsPage {
 		<div class="wrap counter-admin">
 			<h1 class="counter-admin__title">
 				<span class="counter-admin__mark">T</span>
-				<?php esc_html_e( 'Products', 'counter' ); ?>
+				<?php esc_html_e( 'Commerce', 'counter' ); ?>
 			</h1>
+			<?php SectionTabs::render( 'counter-products' ); ?>
 
 			<div class="counter-grid" data-counter-grid="products">
 
@@ -57,6 +58,15 @@ final class ProductsPage {
 
 					<div class="counter-grid__count">
 						<span data-counter-grid-total>0</span> <?php esc_html_e( 'products', 'counter' ); ?>
+					</div>
+
+					<div class="counter-grid__view" role="group" aria-label="<?php esc_attr_e( 'View mode', 'counter' ); ?>">
+						<button type="button" class="counter-grid__view-btn is-active" data-counter-view="list" title="<?php esc_attr_e( 'List view', 'counter' ); ?>" aria-label="<?php esc_attr_e( 'List view', 'counter' ); ?>">
+							<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
+						</button>
+						<button type="button" class="counter-grid__view-btn" data-counter-view="grid" title="<?php esc_attr_e( 'Grid view', 'counter' ); ?>" aria-label="<?php esc_attr_e( 'Grid view', 'counter' ); ?>">
+							<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>
+						</button>
 					</div>
 				</header>
 

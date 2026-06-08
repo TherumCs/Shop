@@ -24,24 +24,42 @@ final class CustomersPage {
 		?>
 		<div class="wrap counter-admin">
 			<h1 class="counter-admin__title">
-				<span class="counter-admin__mark">T</span> Customers
+				<span class="counter-admin__mark">T</span> Commerce
 			</h1>
-			<nav class="counter-admin__tabs">
+			<?php SectionTabs::render( 'counter-customers' ); ?>
+			<nav class="counter-admin__tabs counter-admin__tabs--sub">
 				<a class="counter-admin__tab <?php echo $tab === 'list' ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=counter-customers' ) ); ?>">List</a>
 				<a class="counter-admin__tab <?php echo $tab === 'io' ? 'is-active' : ''; ?>"   href="<?php echo esc_url( admin_url( 'admin.php?page=counter-customers&tab=io' ) ); ?>">Import / Export</a>
 			</nav>
+			<?php $this->renderBody(); ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Inner body only — page chrome (wrap, title, section + sub tabs)
+	 * is the caller's responsibility. Used by ImportExportPage to embed
+	 * the Customers IO view as a sub-tab.
+	 */
+	public function renderBody( ?string $forced_tab = null ): void {
+		// Tab can be forced by a wrapper (e.g. ImportExportPage embeds
+		// the IO view); otherwise read from the request.
+		$tab = $forced_tab !== null
+			? $forced_tab
+			: ( isset( $_GET['tab'] ) ? sanitize_key( (string) $_GET['tab'] ) : 'list' );
+		if ( ! in_array( $tab, [ 'list', 'io' ], true ) ) $tab = 'list';
+		?>
 			<div
 				id="counter-customers"
 				data-rest="<?php echo esc_url( rest_url() ); ?>"
 				data-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>"
 				data-tab="<?php echo esc_attr( $tab ); ?>"
 			><p>Loading…</p></div>
-		</div>
 		<script>
 		( function () {
 			const root = document.getElementById( 'counter-customers' );
 			if ( ! root ) return;
-			const REST  = root.getAttribute( 'data-rest' ) + 'shop/v1/';
+			const REST  = root.getAttribute( 'data-rest' ) + 'counter/v1/';
 			const NONCE = root.getAttribute( 'data-nonce' );
 			const TAB   = root.getAttribute( 'data-tab' );
 			const api = ( path, opts ) => fetch( REST + path, Object.assign( {

@@ -6,13 +6,12 @@
  * (`shop:open-product`, detail = { id }) so the grid stays decoupled
  * from this module — `products-grid.js` only has to dispatch.
  *
- * Phase 1 (this file):
- *   - Drawer shell with header + tab strip + body + footer
- *   - Tabs: General, Pricing, Inventory rendered fully
- *   - Variants, Shipping, Media, SEO scaffolded as "Coming soon"
- *     placeholders so the visual layout is locked in.
- *   - Autosave debounced 800 ms — dirty-tracking per-field, only
- *     PATCHes changed groups.
+ * All 7 tabs are wired end-to-end against /counter/v1/admin/*:
+ *   - General, Pricing, Inventory, Shipping, SEO → product PATCH
+ *     (autosave debounced 800 ms, dirty-tracked per group)
+ *   - Variants → per-row PATCH on /admin/variants/{id}
+ *   - Media → primary + gallery PATCH on /admin/products/{id}/images
+ *     via the WP media-library picker (wp.media)
  *   - "Saved 3s ago" pill in header
  *   - Esc / overlay click closes; warns if there are unsaved changes
  *
@@ -29,7 +28,7 @@ import { useState, useEffect, useRef, useCallback, useMemo }      from 'https://
 const html = htm.bind( h );
 
 const cfg  = window.CounterAdminGridConfig || {};
-const REST = ( cfg.rest || '/wp-json/' ) + 'shop/v1/admin/';
+const REST = ( cfg.rest || '/wp-json/' ) + 'counter/v1/admin/';
 const NONCE = cfg.nonce || '';
 
 function api( path, opts ) {
@@ -355,35 +354,78 @@ function Tab_Inventory( { p, update } ) {
 	`;
 }
 
-function ComingSoon( { label, fields } ) {
+// Inline-editable variant row. Each cell is a controlled input that
+// PATCHes /admin/variants/{id} on blur. Prices are typed in dollars but
+// stored in cents on the server.
+function VariantRow( { v } ) {
+	const [ row,    setRow    ] = useState( v );
+	const [ saving, setSaving ] = useState( null ); // field name being saved
+	const [ err,    setErr    ] = useState( '' );
+
+	useEffect( () => { setRow( v ); }, [ v.id ] );
+
+	function save( field, value ) {
+		setSaving( field );
+		setErr( '' );
+		const payload = { [ field ]: value };
+		api( 'variants/' + row.id, {
+			method: 'PATCH',
+			body: JSON.stringify( payload ),
+		} ).then( r => {
+			if ( r.error ) setErr( r.error.message || 'Save failed.' );
+			else if ( r.variant ) setRow( r.variant );
+		} ).finally( () => setSaving( null ) );
+	}
+
+	const dollarsToCents = s => {
+		const n = parseFloat( String( s ).replace( /[^\d.\-]/g, '' ) );
+		return isNaN( n ) ? null : Math.round( n * 100 );
+	};
+	const centsToDollars = c => ( c === null || c === undefined ) ? '' : ( c / 100 ).toFixed( 2 );
+
 	return html`
-		<div class="counter-pe-coming">
-			<h3>${ label }</h3>
-			<p>This tab's editor isn't wired up yet — it'll land in the next pass. Until then you can edit these fields in Woo.</p>
-			<ul>${ fields.map( f => html`<li>${ f }</li>` ) }</ul>
-		</div>
+		<tr>
+			<td>
+				<input class="counter-pe-vt-in" value=${ row.sku || '' }
+					onInput=${ e => setRow( { ...row, sku: e.target.value } ) }
+					onBlur=${ e => e.target.value !== ( v.sku || '' ) && save( 'sku', e.target.value ) }
+					placeholder="—" />
+			</td>
+			<td>${ Object.values( row.attributes || {} ).join( ' / ' ) || '—' }</td>
+			<td>
+				<input class="counter-pe-vt-in counter-pe-vt-in--mono" value=${ centsToDollars( row.regular_price ) }
+					onBlur=${ e => save( 'price', dollarsToCents( e.target.value ) ) }
+					placeholder="0.00" />
+			</td>
+			<td>
+				<input class="counter-pe-vt-in counter-pe-vt-in--mono" value=${ centsToDollars( row.sale_price ) }
+					onBlur=${ e => save( 'sale_price', dollarsToCents( e.target.value ) ) }
+					placeholder="0.00" />
+			</td>
+			<td>
+				<input class="counter-pe-vt-in counter-pe-vt-in--mono" type="number" value=${ row.stock_qty ?? '' }
+					onBlur=${ e => save( 'stock_qty', e.target.value === '' ? null : parseInt( e.target.value, 10 ) ) }
+					placeholder="—" />
+			</td>
+			<td class="counter-pe-vt-status">
+				${ saving ? html`<span class="counter-pe-pill">Saving…</span>` : null }
+				${ err    ? html`<span class="counter-pe-pill counter-pe-pill--err">${ err }</span>` : null }
+			</td>
+		</tr>
 	`;
 }
 
 function Tab_Variants ( { p } ) {
-	if ( p.type !== 'variable' ) {
-		return html`<div class="counter-pe-coming"><p>This is a <strong>${ p.type }</strong> product — it has no variants.</p></div>`;
+	if ( ! p.variants || p.variants.length === 0 ) {
+		return html`<div class="counter-pe-empty"><p>This product has no variants. Toggle <strong>Has variants</strong> in the General tab to enable variant management.</p></div>`;
 	}
 	return html`
 		<div class="counter-pe-rows">
-			<p class="counter-pe-coming-hint">${ p.variants.length } variant${ p.variants.length === 1 ? '' : 's' }. Inline edit + bulk-apply lands in the next pass.</p>
+			<p class="counter-pe-vt-hint">${ p.variants.length } variant${ p.variants.length === 1 ? '' : 's' }. Click any cell to edit; changes save when you tab out.</p>
 			<table class="counter-pe-vt">
-				<thead><tr><th>SKU</th><th>Attributes</th><th>Price</th><th>Sale</th><th>Stock</th></tr></thead>
+				<thead><tr><th>SKU</th><th>Attributes</th><th>Price</th><th>Sale</th><th>Stock</th><th></th></tr></thead>
 				<tbody>
-					${ p.variants.map( v => html`
-						<tr key=${ v.id }>
-							<td><code>${ v.sku || '—' }</code></td>
-							<td>${ Object.values( v.attributes || {} ).join( ' / ' ) || '—' }</td>
-							<td>${ v.regular_price !== null ? '$' + ( v.regular_price / 100 ).toFixed( 2 ) : '—' }</td>
-							<td>${ v.sale_price !== null ? '$' + ( v.sale_price / 100 ).toFixed( 2 ) : '—' }</td>
-							<td>${ v.stock_qty ?? '—' }</td>
-						</tr>
-					` ) }
+					${ p.variants.map( v => html`<${ VariantRow } key=${ v.id } v=${ v } />` ) }
 				</tbody>
 			</table>
 		</div>
@@ -419,18 +461,135 @@ function Tab_Shipping ( { p, update } ) {
 	`;
 }
 
-function Tab_Media( { p } ) {
+// Media tab — real WordPress media-library picker for primary + gallery.
+// wp.media is enqueued by AdminMenu via wp_enqueue_media() on the
+// products page, so it's already available globally as window.wp.media
+// when this component renders. Each saved selection PATCHes the new
+// /admin/products/{id}/images endpoint, which atomically rewrites the
+// product_images rowset and updates products.primary_image_id.
+function Tab_Media( { p, update } ) {
+	const [ primary, setPrimary ] = useState( p.images.primary );
+	const [ gallery, setGallery ] = useState( p.images.gallery || [] );
+	const [ saving, setSaving   ] = useState( false );
+	const [ err,    setErr      ] = useState( '' );
+
+	useEffect( () => { setPrimary( p.images.primary ); setGallery( p.images.gallery || [] ); }, [ p.id ] );
+
+	function persist( nextPrimary, nextGallery ) {
+		setSaving( true );
+		setErr( '' );
+		api( 'products/' + p.id + '/images', {
+			method: 'PATCH',
+			body: JSON.stringify( {
+				primary_id:  nextPrimary ? nextPrimary.id : null,
+				gallery_ids: nextGallery.map( g => g.attachment_id || g.id ),
+			} ),
+		} ).then( r => {
+			if ( r.error ) {
+				setErr( r.error.message || 'Save failed.' );
+			} else if ( r.images ) {
+				setPrimary( r.images.primary );
+				setGallery( r.images.gallery || [] );
+				if ( update ) update( 'images', r.images );
+			}
+		} ).finally( () => setSaving( false ) );
+	}
+
+	function openPicker( multiple, onSelect ) {
+		if ( ! window.wp || ! window.wp.media ) {
+			setErr( 'WordPress media library unavailable. Reload the page.' );
+			return;
+		}
+		const frame = window.wp.media( {
+			title:    multiple ? 'Pick gallery images' : 'Pick a primary image',
+			button:   { text: 'Use selection' },
+			multiple,
+			library:  { type: 'image' },
+		} );
+		frame.on( 'select', () => {
+			const sel = frame.state().get( 'selection' );
+			onSelect( multiple
+				? sel.map( a => ( { id: a.id, attachment_id: a.id, url: a.attributes.url } ) )
+				: ( () => { const a = sel.first(); return { id: a.id, url: a.attributes.url }; } )()
+			);
+		} );
+		frame.open();
+	}
+
+	function pickPrimary() {
+		openPicker( false, sel => {
+			setPrimary( sel );
+			persist( sel, gallery );
+		} );
+	}
+
+	function pickGallery() {
+		openPicker( true, picked => {
+			// Merge — skip dupes already in the gallery.
+			const existing = new Set( gallery.map( g => g.attachment_id || g.id ) );
+			const merged   = gallery.concat( picked.filter( g => ! existing.has( g.attachment_id || g.id ) ) );
+			setGallery( merged );
+			persist( primary, merged );
+		} );
+	}
+
+	function removeFromGallery( id ) {
+		const next = gallery.filter( g => ( g.attachment_id || g.id ) !== id );
+		setGallery( next );
+		persist( primary, next );
+	}
+
+	function clearPrimary() {
+		setPrimary( null );
+		persist( null, gallery );
+	}
+
 	return html`
 		<div class="counter-pe-rows">
-			${ p.images.primary ? html`
-				<img class="counter-pe-img" src=${ p.images.primary.url } alt="" />
-			` : html`<div class="counter-pe-coming"><p>No primary image set.</p></div>` }
-			${ p.images.gallery.length ? html`
-				<div class="counter-pe-gallery">
-					${ p.images.gallery.map( g => html`<img key=${ g.id } src=${ g.url } alt="" />` ) }
+			<div class="counter-pe-media-block">
+				<div class="counter-pe-media-block__head">
+					<h3>Primary image</h3>
+					${ saving ? html`<span class="counter-pe-pill">Saving…</span>` : null }
+					${ err    ? html`<span class="counter-pe-pill counter-pe-pill--err">${ err }</span>` : null }
 				</div>
-			` : null }
-			<${ ComingSoon } label="Media uploader" fields=${ [ 'WP media-library picker for primary + gallery', 'Drag-reorder', 'Replace via paste/drop' ] } />
+				${ primary
+					? html`
+						<div class="counter-pe-media-primary">
+							<img src=${ primary.url } alt="" />
+							<div class="counter-pe-media-actions">
+								<button type="button" class="button" onClick=${ pickPrimary }>Replace</button>
+								<button type="button" class="button button-link-delete" onClick=${ clearPrimary }>Remove</button>
+							</div>
+						</div>
+					`
+					: html`
+						<div class="counter-pe-media-empty">
+							<button type="button" class="button button-primary" onClick=${ pickPrimary }>Choose image</button>
+						</div>
+					`
+				}
+			</div>
+
+			<div class="counter-pe-media-block">
+				<div class="counter-pe-media-block__head">
+					<h3>Gallery <span class="counter-pe-media-count">${ gallery.length }</span></h3>
+					<button type="button" class="button" onClick=${ pickGallery }>Add images</button>
+				</div>
+				${ gallery.length
+					? html`
+						<div class="counter-pe-gallery">
+							${ gallery.map( g => html`
+								<div class="counter-pe-gallery__item" key=${ g.id || g.attachment_id }>
+									<img src=${ g.url } alt=${ g.alt || '' } />
+									<button type="button" class="counter-pe-gallery__rm" title="Remove"
+										onClick=${ () => removeFromGallery( g.attachment_id || g.id ) }>×</button>
+								</div>
+							` ) }
+						</div>
+					`
+					: html`<p class="counter-pe-media-hint">No gallery images yet.</p>`
+				}
+			</div>
 		</div>
 	`;
 }

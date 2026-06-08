@@ -27,14 +27,26 @@ final class ImporterPage {
 	) {}
 
 	public function render(): void {
-		$importers = $this->registry->all();
 		?>
 		<div class="wrap counter-admin">
 			<h1 class="counter-admin__title">
 				<span class="counter-admin__mark">T</span>
-				<?php esc_html_e( 'Import Catalog', 'counter' ); ?>
+				<?php esc_html_e( 'Manage Data', 'counter' ); ?>
 			</h1>
+			<?php SectionTabs::render( 'counter-import' ); ?>
+			<?php $this->renderBody(); ?>
+		</div>
+		<?php
+	}
 
+	/**
+	 * Inner body only — page chrome (wrap, title, section tabs) is
+	 * caller's responsibility. Lets ImportExportPage embed this view
+	 * inside its own header without re-emitting duplicates.
+	 */
+	public function renderBody(): void {
+		$importers = $this->registry->all();
+		?>
 			<p class="counter-admin__lede">
 				<?php esc_html_e( 'Drop a CSV, paste a URL, upload a PDF/Markdown/image, or import everything from WooCommerce. Detect products, review, then confirm. Nothing writes to the database until you click Commit.', 'shop' ); ?>
 			</p>
@@ -151,7 +163,6 @@ final class ImporterPage {
 				</section>
 
 			</div>
-		</div>
 
 		<script>
 		( function () {

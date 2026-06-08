@@ -25,7 +25,7 @@ const html = htm.bind( h );
 const root = document.getElementById( 'counter-builder-root' );
 if ( root ) {
 	const pageId = parseInt( root.getAttribute( 'data-page-id' ), 10 );
-	const REST   = root.getAttribute( 'data-rest' ) + 'shop/v1/';
+	const REST   = root.getAttribute( 'data-rest' ) + 'counter/v1/';
 	const NONCE  = root.getAttribute( 'data-nonce' );
 
 	const api = ( path, opts = {} ) =>

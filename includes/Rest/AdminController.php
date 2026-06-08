@@ -95,6 +95,26 @@ final class AdminController {
 			'permission_callback' => $auth,
 		] );
 
+		// Set the primary image + gallery for a product. Body shape:
+		//   { primary_id: int|null, gallery_ids: int[] }
+		// IDs come from wp.media's attachment picker on the editor's
+		// Media tab. Replaces the entire product_images rowset for the
+		// product (deletes + re-inserts) under a transaction.
+		register_rest_route( self::NAMESPACE, '/admin/products/(?P<id>\d+)/images', [
+			'methods'             => 'PATCH',
+			'callback'            => [ $this, 'patchProductImages' ],
+			'permission_callback' => $auth,
+		] );
+
+		// Inline edit for a single variant — sku, price, sale price (=
+		// compare_at_price in our schema), stock qty. Other variant
+		// fields stay read-only here.
+		register_rest_route( self::NAMESPACE, '/admin/variants/(?P<id>\d+)', [
+			'methods'             => 'PATCH',
+			'callback'            => [ $this, 'patchVariant' ],
+			'permission_callback' => $auth,
+		] );
+
 		register_rest_route( self::NAMESPACE, '/admin/orders', [
 			'methods'             => 'GET',
 			'callback'            => [ $this, 'listOrders' ],
@@ -191,10 +211,37 @@ final class AdminController {
 		$stmt->execute( $bind );
 		$rows = $stmt->fetchAll();
 
-		// Hydrate primary image URL for thumbnails
+		// Hydrate primary image URL for thumbnails. If the SQLite row has
+		// no primary_image_id (common after a bare import where image refs
+		// weren't carried), fall back to the matching WooCommerce product's
+		// featured image. Counter IDs don't match WP post IDs — the importer
+		// generates its own — so we join on the slug instead. One query per
+		// page (≤200 rows) regardless of how many rows need the fallback.
+		$slug_to_image = [];
+		$missing_slugs = array_values( array_filter( array_map(
+			fn( $r ) => empty( $r['primary_image_id'] ) ? (string) $r['slug'] : null,
+			$rows
+		) ) );
+
+		if ( $missing_slugs ) {
+			global $wpdb;
+			$ph    = implode( ',', array_fill( 0, count( $missing_slugs ), '%s' ) );
+			$sql   = "SELECT p.post_name AS slug, pm.meta_value AS attachment_id
+			            FROM {$wpdb->posts} p
+			            JOIN {$wpdb->postmeta} pm
+			              ON pm.post_id = p.ID AND pm.meta_key = '_thumbnail_id'
+			           WHERE p.post_type = 'product'
+			             AND p.post_name IN ( $ph )";
+			$lookup = $wpdb->get_results( $wpdb->prepare( $sql, ...$missing_slugs ), ARRAY_A );
+			foreach ( $lookup as $row ) {
+				$slug_to_image[ $row['slug'] ] = (int) $row['attachment_id'];
+			}
+		}
+
 		foreach ( $rows as &$r ) {
-			$r['image_url'] = $r['primary_image_id']
-				? (string) wp_get_attachment_image_url( (int) $r['primary_image_id'], 'thumbnail' )
+			$attachment_id = (int) ( $r['primary_image_id'] ?: ( $slug_to_image[ $r['slug'] ] ?? 0 ) );
+			$r['image_url'] = $attachment_id
+				? (string) wp_get_attachment_image_url( $attachment_id, 'thumbnail' )
 				: null;
 		}
 
@@ -339,9 +386,9 @@ final class AdminController {
 			],
 			'images' => [
 				'primary' => $primaryId ? [ 'id' => $primaryId, 'url' => (string) wp_get_attachment_image_url( $primaryId, 'medium' ) ] : null,
-				'gallery' => [],
+				'gallery' => $this->galleryFor( (int) $row['id'] ),
 			],
-			'variants'   => [], // populated via /admin/products/{id}/variants in a follow-up
+			'variants'   => $this->variantsFor( (int) $row['id'] ),
 			'attributes' => [],
 			'seo'        => [ 'meta_title' => '', 'meta_description' => '' ],
 			'urls' => [
@@ -736,5 +783,204 @@ final class AdminController {
 		}
 
 		return true;
+	}
+
+	// ─── Media + Variants ────────────────────────────────────────────────
+
+	/**
+	 * Build the gallery payload for a product. Returns the list of
+	 * non-variant images attached to the product, ordered by position,
+	 * each with a resolved attachment URL ready for the editor's Media
+	 * tab to render thumbnails.
+	 *
+	 * @return list<array{ id:int, attachment_id:int, url:string, alt:string }>
+	 */
+	private function galleryFor( int $product_id ): array {
+		$pdo  = DB::pdo();
+		$stmt = $pdo->prepare(
+			'SELECT id, attachment_id, alt_text
+			   FROM product_images
+			  WHERE product_id = :pid AND variant_id IS NULL
+			  ORDER BY position ASC, id ASC'
+		);
+		$stmt->execute( [ ':pid' => $product_id ] );
+		$out = [];
+		foreach ( $stmt->fetchAll() as $row ) {
+			$out[] = [
+				'id'            => (int) $row['id'],
+				'attachment_id' => (int) $row['attachment_id'],
+				'url'           => (string) wp_get_attachment_image_url( (int) $row['attachment_id'], 'thumbnail' ),
+				'alt'           => (string) ( $row['alt_text'] ?? '' ),
+			];
+		}
+		return $out;
+	}
+
+	/**
+	 * Build the variants payload for a product. Money values come back
+	 * in dollars (float) so the editor's inputs don't have to deal with
+	 * the cents/dollars conversion — server-side `patchVariant` handles
+	 * the conversion back to cents on save.
+	 *
+	 * @return list<array<string,mixed>>
+	 */
+	private function variantsFor( int $product_id ): array {
+		$pdo  = DB::pdo();
+		$stmt = $pdo->prepare(
+			'SELECT id, sku, position, enabled, price, compare_at_price, stock_qty, image_id
+			   FROM product_variants
+			  WHERE product_id = :pid
+			  ORDER BY position ASC, id ASC'
+		);
+		$stmt->execute( [ ':pid' => $product_id ] );
+
+		$attrStmt = $pdo->prepare(
+			'SELECT a.name AS attribute, vv.value AS value
+			   FROM variant_attribute_values vv
+			   JOIN attribute_values av ON av.id = vv.attribute_value_id
+			   JOIN attributes a       ON a.id  = av.attribute_id
+			  WHERE vv.variant_id = :vid'
+		);
+
+		$out = [];
+		foreach ( $stmt->fetchAll() as $row ) {
+			$attrs = [];
+			try {
+				$attrStmt->execute( [ ':vid' => (int) $row['id'] ] );
+				foreach ( $attrStmt->fetchAll() as $a ) {
+					$attrs[ (string) $a['attribute'] ] = (string) $a['value'];
+				}
+			} catch ( \Throwable $e ) {
+				// Older imports may not have the attribute join tables
+				// populated — skip gracefully so the row still renders.
+			}
+
+			$out[] = [
+				'id'            => (int) $row['id'],
+				'sku'           => (string) ( $row['sku'] ?? '' ),
+				'enabled'       => (bool) $row['enabled'],
+				'regular_price' => $row['price']            !== null ? (int) $row['price']            : null,
+				'sale_price'    => $row['compare_at_price'] !== null ? (int) $row['compare_at_price'] : null,
+				'stock_qty'     => $row['stock_qty']        !== null ? (int) $row['stock_qty']        : null,
+				'image_id'      => $row['image_id']         !== null ? (int) $row['image_id']        : null,
+				'attributes'    => $attrs,
+			];
+		}
+		return $out;
+	}
+
+	/**
+	 * PATCH /admin/products/{id}/images
+	 *
+	 * Body: { primary_id: int|null, gallery_ids: int[] }
+	 *
+	 * Replaces the entire product_images rowset for the product. We
+	 * delete-and-reinsert in a transaction rather than diffing because
+	 * the editor sends the final desired state — much simpler than
+	 * tracking add/remove deltas client-side.
+	 */
+	public function patchProductImages( \WP_REST_Request $req ): \WP_REST_Response {
+		$product_id  = (int) $req->get_param( 'id' );
+		$body        = (array) $req->get_json_params();
+		$primary_id  = isset( $body['primary_id'] ) && $body['primary_id'] !== null
+			? (int) $body['primary_id']
+			: null;
+		$gallery_ids = array_values( array_filter( array_map( 'intval', (array) ( $body['gallery_ids'] ?? [] ) ) ) );
+
+		try {
+			DB::tx( function ( \PDO $pdo ) use ( $product_id, $primary_id, $gallery_ids ): void {
+				// Update primary_image_id on the parent row.
+				$pdo->prepare( 'UPDATE products SET primary_image_id = :pid WHERE id = :id' )
+					->execute( [ ':pid' => $primary_id, ':id' => $product_id ] );
+
+				// Reset the product-level gallery (variant images stay
+				// untouched — they're keyed by variant_id).
+				$pdo->prepare( 'DELETE FROM product_images WHERE product_id = :id AND variant_id IS NULL' )
+					->execute( [ ':id' => $product_id ] );
+
+				$ins = $pdo->prepare(
+					'INSERT INTO product_images (product_id, variant_id, attachment_id, position, alt_text)
+					     VALUES (:pid, NULL, :att, :pos, :alt)'
+				);
+				foreach ( $gallery_ids as $pos => $attachment_id ) {
+					if ( $attachment_id <= 0 ) continue;
+					$alt = (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+					$ins->execute( [
+						':pid' => $product_id,
+						':att' => $attachment_id,
+						':pos' => $pos,
+						':alt' => $alt,
+					] );
+				}
+			} );
+		} catch ( \Throwable $e ) {
+			return new \WP_REST_Response( [ 'error' => [ 'message' => $e->getMessage() ] ], 500 );
+		}
+
+		return new \WP_REST_Response( [
+			'ok'      => true,
+			'images'  => [
+				'primary' => $primary_id ? [ 'id' => $primary_id, 'url' => (string) wp_get_attachment_image_url( $primary_id, 'medium' ) ] : null,
+				'gallery' => $this->galleryFor( $product_id ),
+			],
+		], 200 );
+	}
+
+	/**
+	 * PATCH /admin/variants/{id}
+	 *
+	 * Accepts: sku, price (cents), sale_price (cents), stock_qty.
+	 * Anything else in the body is ignored. Returns the updated variant
+	 * row in the same shape `variantsFor()` produces so the editor can
+	 * splice it directly into local state.
+	 */
+	public function patchVariant( \WP_REST_Request $req ): \WP_REST_Response {
+		$id   = (int) $req->get_param( 'id' );
+		$body = (array) $req->get_json_params();
+
+		$sets  = [];
+		$bind  = [ ':id' => $id ];
+		$map   = [
+			'sku'        => 'sku',
+			'price'      => 'price',
+			'sale_price' => 'compare_at_price',
+			'stock_qty'  => 'stock_qty',
+		];
+		foreach ( $map as $client_key => $col ) {
+			if ( ! array_key_exists( $client_key, $body ) ) continue;
+			$value = $body[ $client_key ];
+			if ( in_array( $client_key, [ 'price', 'sale_price', 'stock_qty' ], true ) ) {
+				$value = $value === null || $value === '' ? null : (int) $value;
+			} else {
+				$value = $value === null ? null : sanitize_text_field( (string) $value );
+			}
+			$sets[]            = "$col = :$client_key";
+			$bind[":$client_key"] = $value;
+		}
+
+		if ( ! $sets ) {
+			return new \WP_REST_Response( [ 'error' => [ 'message' => 'No editable fields supplied.' ] ], 400 );
+		}
+
+		$pdo = DB::pdo();
+		try {
+			$pdo->prepare( 'UPDATE product_variants SET ' . implode( ', ', $sets ) . ' WHERE id = :id' )
+				->execute( $bind );
+		} catch ( \Throwable $e ) {
+			return new \WP_REST_Response( [ 'error' => [ 'message' => $e->getMessage() ] ], 500 );
+		}
+
+		// Fetch the parent product id so we can rebuild the variant
+		// payload via the same helper the read endpoint uses.
+		$row = $pdo->prepare( 'SELECT product_id FROM product_variants WHERE id = :id' );
+		$row->execute( [ ':id' => $id ] );
+		$product_id = (int) ( $row->fetchColumn() ?: 0 );
+		$variants   = $this->variantsFor( $product_id );
+		$updated    = null;
+		foreach ( $variants as $v ) {
+			if ( $v['id'] === $id ) { $updated = $v; break; }
+		}
+
+		return new \WP_REST_Response( [ 'ok' => true, 'variant' => $updated ], 200 );
 	}
 }

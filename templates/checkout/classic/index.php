@@ -141,7 +141,9 @@ $bnpl_quarter = $cart->grandTotal->dividedBy( 4 );
 					<div class="counter-classic__wallet-grid">
 						<button class="counter-classic__wallet counter-classic__wallet--apple" type="button">&#xF8FF;&nbsp;Pay</button>
 						<button class="counter-classic__wallet counter-classic__wallet--google" type="button">G Pay</button>
-						<button class="counter-classic__wallet counter-classic__wallet--paypal" type="button">PayPal</button>
+						<button class="counter-classic__wallet counter-classic__wallet--link" type="button" data-method="link">Link</button>
+						<!-- PayPal Smart Buttons mount: replaced at runtime by the PayPal SDK. -->
+						<div   class="counter-classic__wallet counter-classic__wallet--paypal" data-paypal-funding="paypal">PayPal</div>
 						<button class="counter-classic__wallet counter-classic__wallet--shop" type="button">Shop Pay</button>
 					</div>
 				</div>
@@ -149,14 +151,16 @@ $bnpl_quarter = $cart->grandTotal->dividedBy( 4 );
 				<!-- BNPL -->
 				<div class="counter-classic__method-panel" data-panel="bnpl">
 					<?php foreach ( [
-						[ 'klarna', 'Klarna', __( '0% interest · every 2 weeks', 'counter' ) ],
-						[ 'affirm', 'affirm', __( '3, 6, or 12 monthly payments', 'shop' ) ],
-						[ 'afterpay', 'Afterpay', __( '0% interest · every 2 weeks', 'counter' ) ],
-						[ 'sezzle', 'Sezzle', __( 'Soft credit check', 'counter' ) ],
-						[ 'zip', 'Zip', __( '$1 per installment', 'counter' ) ],
-						[ 'paypalcredit', 'PP Credit', __( '6 months no interest on $99+', 'counter' ) ],
-					] as $i => [ $slug, $label, $sub ] ) : ?>
-						<label class="counter-classic__bnpl-card <?php echo $i === 0 ? 'active' : ''; ?>">
+						[ 'klarna',       'Klarna',    __( '0% interest · every 2 weeks', 'counter' ),    null ],
+						[ 'affirm',       'affirm',    __( '3, 6, or 12 monthly payments', 'shop' ),      null ],
+						[ 'afterpay',     'Afterpay',  __( '0% interest · every 2 weeks', 'counter' ),    null ],
+						[ 'sezzle',       'Sezzle',    __( 'Soft credit check', 'counter' ),              null ],
+						[ 'zip',          'Zip',       __( '$1 per installment', 'counter' ),             null ],
+						// PP Credit is rendered by PayPal Smart Buttons, not a static label.
+						[ 'paypalcredit', 'PP Credit', __( '6 months no interest on $99+', 'counter' ),   'paylater' ],
+					] as $i => [ $slug, $label, $sub, $paypal_funding ] ) : ?>
+						<label class="counter-classic__bnpl-card <?php echo $i === 0 ? 'active' : ''; ?>"
+							<?php if ( $paypal_funding ) : ?>data-paypal-funding="<?php echo esc_attr( $paypal_funding ); ?>"<?php endif; ?>>
 							<span class="counter-classic__bnpl-logo counter-classic__bnpl-logo--<?php echo esc_attr( $slug ); ?>"><?php echo esc_html( $label ); ?></span>
 							<div>
 								<div class="counter-classic__bnpl-name">4 payments of <span data-quartertotal><?php echo esc_html( $bnpl_quarter->format() ); ?></span></div>
@@ -183,9 +187,11 @@ $bnpl_quarter = $cart->grandTotal->dividedBy( 4 );
 				<div class="counter-classic__method-panel" data-panel="crypto">
 					<div class="counter-classic__crypto-grid">
 						<?php foreach ( [
-							[ 'btc', '&#x20BF;', 'BTC' ], [ 'eth', '&#x39E;', 'ETH' ],
-							[ 'usdc', '$', 'USDC' ], [ 'usdt', '&#x20AE;', 'USDT' ],
-							[ 'sol', '&#x25CE;', 'SOL' ], [ 'xrp', '&times;', 'XRP' ],
+							[ 'btc',  '&#x20BF;', 'BTC' ],   [ 'eth',  '&#x39E;', 'ETH' ],
+							[ 'usdc', '$',        'USDC' ],  [ 'usdt', '&#x20AE;', 'USDT' ],
+							[ 'sol',  '&#x25CE;', 'SOL' ],   [ 'xrp',  '&times;',  'XRP' ],
+							[ 'link', '&#x26AD;', 'LINK' ],  [ 'xlm',  '&#x2606;', 'XLM' ],
+							[ 'hbar', 'H',        'HBAR' ],
 						] as $i => [ $slug, $sym, $label ] ) : ?>
 							<label class="counter-classic__crypto-chip <?php echo $i === 0 ? 'active' : ''; ?>">
 								<span class="counter-classic__crypto-sym counter-classic__crypto-sym--<?php echo esc_attr( $slug ); ?>"><?php echo $sym; ?></span>
@@ -201,9 +207,10 @@ $bnpl_quarter = $cart->grandTotal->dividedBy( 4 );
 				<!-- P2P -->
 				<div class="counter-classic__method-panel" data-panel="p2p">
 					<div class="counter-classic__p2p-grid">
-						<button class="counter-classic__p2p counter-classic__p2p--cashapp" type="button">$ Cash App</button>
-						<button class="counter-classic__p2p counter-classic__p2p--venmo" type="button">Venmo</button>
-						<button class="counter-classic__p2p counter-classic__p2p--zelle" type="button">Zelle</button>
+						<button class="counter-classic__p2p counter-classic__p2p--cashapp" type="button" data-method="cashapp">$ Cash App</button>
+						<!-- Venmo: PayPal Smart Buttons mount -->
+						<div    class="counter-classic__p2p counter-classic__p2p--venmo"   data-paypal-funding="venmo">Venmo</div>
+						<button class="counter-classic__p2p counter-classic__p2p--zelle"   type="button" data-method="zelle">Zelle</button>
 					</div>
 				</div>
 			</section>

@@ -34,6 +34,37 @@ final class PayPalProvider implements PaymentProvider {
 		return $this->clientId() !== '' && $this->clientSecret() !== '';
 	}
 
+	/**
+	 * URL for PayPal's Smart Buttons SDK with our merchant's client_id
+	 * and funding sources enabled. The frontend loads this once on the
+	 * checkout page; calling `paypal.Buttons({ fundingSource: ... })`
+	 * then renders dedicated buttons for PayPal, Venmo, and PayPal Credit
+	 * — all routing through this single connector.
+	 *
+	 * Returns an empty string when not connected so the frontend can
+	 * hide the corresponding buttons gracefully.
+	 */
+	public function smartButtonsSdkUrl(): string {
+		if ( ! $this->isConnected() ) return '';
+		$base = 'https://www.paypal.com/sdk/js?' . http_build_query( [
+			'client-id'      => $this->clientId(),
+			'currency'       => 'USD',
+			// Surface Venmo + PayPal Credit ("paylater") as separate buttons.
+			'enable-funding' => 'venmo,paylater',
+			'components'     => 'buttons',
+			'intent'         => 'capture',
+		] );
+		return $base;
+	}
+
+	/**
+	 * Public client id for the frontend. Returns empty string when not
+	 * connected. Read by REST so the checkout JS can mount Smart Buttons.
+	 */
+	public function publicClientId(): string {
+		return $this->isConnected() ? $this->clientId() : '';
+	}
+
 	public function createIntent( Order $order, string $method ): PaymentIntent {
 		$body = $this->call( 'POST', 'v2/checkout/orders', [
 			'intent' => 'CAPTURE',

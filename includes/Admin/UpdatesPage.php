@@ -20,8 +20,9 @@ final class UpdatesPage {
 		?>
 		<div class="wrap counter-admin">
 			<h1 class="counter-admin__title">
-				<span class="counter-admin__mark">T</span> Updates
+				<span class="counter-admin__mark">T</span> Manage Data
 			</h1>
+			<?php SectionTabs::render( 'counter-updates' ); ?>
 			<div
 				id="counter-updater"
 				data-rest="<?php echo esc_url( rest_url() ); ?>"
@@ -32,7 +33,7 @@ final class UpdatesPage {
 		( function () {
 			const root = document.getElementById( 'counter-updater' );
 			if ( ! root ) return;
-			const REST  = root.getAttribute( 'data-rest' ) + 'shop/v1/admin/updater/';
+			const REST  = root.getAttribute( 'data-rest' ) + 'counter/v1/admin/updater/';
 			const NONCE = root.getAttribute( 'data-nonce' );
 
 			const api = ( path, opts ) => fetch( REST + path, Object.assign( {

@@ -31,31 +31,48 @@ final class AdminMenu {
 		private readonly ProductCategoryOrderPage   $categoryOrder,
 		private readonly ProductVariantOrderPage    $variantOrder,
 		private readonly CustomTaxonomyOrderPage    $taxonomyOrder,
+		private readonly DashboardPage              $dashboard,
+		private readonly CategoriesPage             $categories,
+		private readonly ImportExportPage           $importExport,
 	) {}
 
 	public function register(): void {
 		add_action( 'admin_menu',   [ $this, 'menus' ], 20 );
 		add_action( 'admin_menu',   [ $this, 'organizeMenu' ], 25 );
 		add_action( 'admin_enqueue_scripts', [ $this, 'assets' ] );
+
+		// Dashboard registers its own meta-box hooks on its screen load.
+		$this->dashboard->register();
+		// Categories registers admin-post handlers for create/delete.
+		$this->categories->register();
 	}
 
 	public function menus(): void {
 		add_menu_page(
 			page_title: __( 'Counter by Therum', 'counter' ),
 			menu_title: __( 'Counter', 'counter' ),
-			capability: 'manage_woocommerce',
+			capability: 'manage_options',
 			menu_slug:   'counter',
-			callback:   [ $this->settings, 'render' ],
+			callback:   [ $this->dashboard, 'render' ],
 			icon_url:   'dashicons-cart',
 			position:   58,
 		);
 
 		add_submenu_page(
 			parent_slug: 'counter',
+			page_title:  __( 'Dashboard', 'counter' ),
+			menu_title:  __( 'Dashboard', 'counter' ),
+			capability:  'manage_options',
+			menu_slug:   'counter',
+			callback:    [ $this->dashboard, 'render' ],
+		);
+
+		add_submenu_page(
+			parent_slug: 'counter',
 			page_title:  __( 'Settings', 'counter' ),
 			menu_title:  __( 'Settings', 'counter' ),
-			capability:  'manage_woocommerce',
-			menu_slug:   'counter',
+			capability:  'manage_options',
+			menu_slug:   'counter-settings',
 			callback:    [ $this->settings, 'render' ],
 		);
 
@@ -63,7 +80,7 @@ final class AdminMenu {
 			parent_slug: 'counter',
 			page_title:  __( 'Products', 'counter' ),
 			menu_title:  __( 'Products', 'counter' ),
-			capability:  'manage_woocommerce',
+			capability:  'manage_options',
 			menu_slug:   'counter-products',
 			callback:    [ $this->products, 'render' ],
 		);
@@ -72,41 +89,58 @@ final class AdminMenu {
 			parent_slug: 'counter',
 			page_title:  __( 'Orders', 'counter' ),
 			menu_title:  __( 'Orders', 'counter' ),
-			capability:  'manage_woocommerce',
+			capability:  'manage_options',
 			menu_slug:   'counter-orders',
 			callback:    [ $this->orders, 'render' ],
 		);
 
+		// Unified Import / Export hub — products, orders, customers all
+		// in one page with sub-tabs. Replaces the old separate "Import"
+		// and "Order I/O" entries.
 		add_submenu_page(
 			parent_slug: 'counter',
-			page_title:  __( 'Import Catalog', 'counter' ),
-			menu_title:  __( 'Import', 'counter' ),
-			capability:  'manage_woocommerce',
+			page_title:  __( 'Import / Export', 'counter' ),
+			menu_title:  __( 'Import / Export', 'counter' ),
+			capability:  'manage_options',
 			menu_slug:   'counter-import',
-			callback:    [ $this->importer, 'render' ],
+			callback:    [ $this->importExport, 'render' ],
 		);
 
 		add_submenu_page(
 			parent_slug: 'counter',
 			page_title:  __( 'Customers', 'counter' ),
 			menu_title:  __( 'Customers', 'counter' ),
-			capability:  'manage_woocommerce',
+			capability:  'manage_options',
 			menu_slug:   'counter-customers',
 			callback:    [ $this->customers, 'render' ],
 		);
 		add_submenu_page(
 			parent_slug: 'counter',
+			page_title:  __( 'Categories', 'counter' ),
+			menu_title:  __( 'Categories', 'counter' ),
+			capability:  'manage_options',
+			menu_slug:   'counter-categories',
+			callback:    [ $this->categories, 'render' ],
+		);
+		// counter-orders-io: hidden — kept registered for deep-link
+		// back-compat so old bookmarks still resolve. The page itself
+		// redirects to the unified Import / Export view.
+		add_submenu_page(
+			parent_slug: null,
 			page_title:  __( 'Order Import / Export', 'counter' ),
 			menu_title:  __( 'Order I/O', 'counter' ),
-			capability:  'manage_woocommerce',
+			capability:  'manage_options',
 			menu_slug:   'counter-orders-io',
-			callback:    [ $this->orderIo, 'render' ],
+			callback:    function (): void {
+				wp_safe_redirect( admin_url( 'admin.php?page=counter-import&tab=orders' ) );
+				exit;
+			},
 		);
 		add_submenu_page(
 			parent_slug: 'counter',
-			page_title:  __( 'Studio Pay', 'counter' ),
-			menu_title:  __( 'Studio Pay', 'counter' ),
-			capability:  'manage_woocommerce',
+			page_title:  __( 'Payments', 'counter' ),
+			menu_title:  __( 'Payments', 'counter' ),
+			capability:  'manage_options',
 			menu_slug:   'counter-studio-pay',
 			callback:    [ $this->studioPay, 'render' ],
 		);
@@ -126,7 +160,7 @@ final class AdminMenu {
 			parent_slug: 'counter',
 			page_title:  __( 'Category Order', 'counter' ),
 			menu_title:  __( 'Category Order', 'counter' ),
-			capability:  'manage_woocommerce',
+			capability:  'manage_options',
 			menu_slug:   'counter-categories-order',
 			callback:    [ $this->categoryOrder, 'render' ],
 		);
@@ -135,7 +169,7 @@ final class AdminMenu {
 			parent_slug: 'counter',
 			page_title:  __( 'Variant Order', 'counter' ),
 			menu_title:  __( 'Variant Order', 'counter' ),
-			capability:  'manage_woocommerce',
+			capability:  'manage_options',
 			menu_slug:   'counter-variants-order',
 			callback:    [ $this->variantOrder, 'render' ],
 		);
@@ -144,7 +178,7 @@ final class AdminMenu {
 			parent_slug: 'counter',
 			page_title:  __( 'Taxonomy Order', 'counter' ),
 			menu_title:  __( 'Taxonomy Order', 'counter' ),
-			capability:  'manage_woocommerce',
+			capability:  'manage_options',
 			menu_slug:   'counter-taxonomies',
 			callback:    [ $this->taxonomyOrder, 'render' ],
 		);
@@ -155,7 +189,7 @@ final class AdminMenu {
 				parent_slug: 'counter',
 				page_title:  __( 'Pages', 'counter' ),
 				menu_title:  __( 'Pages', 'counter' ),
-				capability:  'manage_woocommerce',
+				capability:  'manage_options',
 				menu_slug:   'counter-pages',
 				callback:    [ $this->builder, 'renderPageList' ],
 			);
@@ -166,7 +200,7 @@ final class AdminMenu {
 				parent_slug: null,
 				page_title:  __( 'Builder', 'counter' ),
 				menu_title:  __( 'Builder', 'counter' ),
-				capability:  'manage_woocommerce',
+				capability:  'manage_options',
 				menu_slug:   'counter-builder',
 				callback:    [ $this->builder, 'render' ],
 			);
@@ -184,49 +218,48 @@ final class AdminMenu {
 			return;
 		}
 
-		$items = $submenu['counter'];
+		// Index submenu items by slug so we can pluck them by name and not
+		// be brittle against menu registration order changes.
+		$by_slug = [];
+		foreach ( $submenu['counter'] as $item ) {
+			$by_slug[ $item[2] ?? '' ] = $item;
+		}
+
+		$section = fn( string $label ) => [ $label, 'counter', 'counter-menu-section-title' ];
+		$pick = function ( string $slug ) use ( $by_slug ): ?array {
+			return $by_slug[ $slug ] ?? null;
+		};
+
 		$organized = [];
+		$add = function ( ?array $item ) use ( &$organized ): void {
+			if ( $item !== null ) $organized[] = $item;
+		};
 
-		// Section: COMMERCE
-		$organized[] = [ 'COMMERCE', 'counter', 'counter-menu-section-title' ];
-		$organized[] = [ $items[1][0], $items[1][1], $items[1][2] ]; // Products
-		$organized[] = [ $items[2][0], $items[2][1], $items[2][2] ]; // Orders
-		$organized[] = [ $items[4][0], $items[4][1], $items[4][2] ]; // Customers
+		// Dashboard first — it's the landing page, no section header.
+		$add( $pick( 'counter' ) );
 
-		// Section: MANAGE DATA
-		$organized[] = [ 'MANAGE DATA', 'counter', 'counter-menu-section-title' ];
-		$organized[] = [ $items[3][0], $items[3][1], $items[3][2] ]; // Import
-		$organized[] = [ $items[5][0], $items[5][1], $items[5][2] ]; // Order I/O
-		if ( isset( $items[8] ) ) {
-			$organized[] = [ $items[8][0], $items[8][1], $items[8][2] ]; // Updates
-		}
+		$organized[] = $section( 'COMMERCE' );
+		$add( $pick( 'counter-products' ) );
+		$add( $pick( 'counter-orders' ) );
+		$add( $pick( 'counter-customers' ) );
+		$add( $pick( 'counter-categories' ) );
 
-		// Section: ORGANIZATION
-		$organized[] = [ 'ORGANIZATION', 'counter', 'counter-menu-section-title' ];
-		if ( isset( $items[9] ) ) {
-			$organized[] = [ $items[9][0], $items[9][1], $items[9][2] ]; // Category Order
-		}
-		if ( isset( $items[10] ) ) {
-			$organized[] = [ $items[10][0], $items[10][1], $items[10][2] ]; // Variant Order
-		}
-		if ( isset( $items[11] ) ) {
-			$organized[] = [ $items[11][0], $items[11][1], $items[11][2] ]; // Taxonomy Order
-		}
+		$organized[] = $section( 'MANAGE DATA' );
+		$add( $pick( 'counter-import' ) );
+		$add( $pick( 'counter-updates' ) );
 
-		// Section: INTEGRATIONS
-		$organized[] = [ 'INTEGRATIONS', 'counter', 'counter-menu-section-title' ];
-		if ( isset( $items[6] ) ) {
-			$organized[] = [ $items[6][0], $items[6][1], $items[6][2] ]; // Studio Pay
-		}
+		$organized[] = $section( 'ORGANIZATION' );
+		$add( $pick( 'counter-categories-order' ) );
+		$add( $pick( 'counter-variants-order' ) );
+		$add( $pick( 'counter-taxonomies' ) );
 
-		// Section: SETTINGS
-		$organized[] = [ 'SETTINGS', 'counter', 'counter-menu-section-title' ];
-		$organized[] = [ $items[0][0], $items[0][1], $items[0][2] ]; // Settings
+		$organized[] = $section( 'PAYMENTS' );
+		$add( $pick( 'counter-studio-pay' ) );
 
-		// Rebuild submenu with sections
-		$submenu['counter'] = array_map( function ( $item ) {
-			return [ $item[0], $item[1], $item[2] ];
-		}, $organized );
+		$organized[] = $section( 'SETTINGS' );
+		$add( $pick( 'counter-settings' ) );
+
+		$submenu['counter'] = $organized;
 
 		// Add CSS to render section headers
 		add_action( 'admin_head', function () {
@@ -259,10 +292,9 @@ final class AdminMenu {
 		// Only enqueue on Counter's own admin pages.
 		if ( strpos( $hook, 'counter' ) === false ) return;
 
-		// Enqueue redesigned admin styles
-		wp_register_style( 'counter-admin-redesign', COUNTER_URL . 'assets/admin/admin-redesign.css', [], COUNTER_VERSION );
-		wp_enqueue_style( 'counter-admin-redesign' );
-
+		// Counter admin styles only. admin-redesign.css is intentionally NOT
+		// enqueued — it contains global #adminmenu / body.wp-admin selectors
+		// that leak into WP's own chrome and break the dashboard.
 		wp_register_style( 'counter-admin', COUNTER_URL . 'assets/admin/admin.css', [], COUNTER_VERSION );
 		wp_enqueue_style( 'counter-admin' );
 

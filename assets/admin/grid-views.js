@@ -24,7 +24,7 @@
 	'use strict';
 
 	const cfg   = window.CounterAdminGridConfig || {};
-	const REST  = ( cfg.rest || '/wp-json/' ) + 'shop/v1/admin/grid-views/';
+	const REST  = ( cfg.rest || '/wp-json/' ) + 'counter/v1/admin/grid-views/';
 	const NONCE = cfg.nonce || '';
 
 	const mounts = document.querySelectorAll( '[data-counter-grid-views]' );

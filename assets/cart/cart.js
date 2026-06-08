@@ -27,7 +27,7 @@
 	'use strict';
 
 	var cfg = window.CounterCartConfig || {};
-	var REST = ( cfg.rest || '/wp-json/' ) + 'shop/v1/';
+	var REST = ( cfg.rest || '/wp-json/' ) + 'counter/v1/';
 	var NONCE = cfg.nonce || '';
 
 	// ─── Fetch helper ───────────────────────────────────────────────────────

@@ -72,7 +72,7 @@ final class BuilderPage {
 			var root = document.getElementById( 'counter-page-list' );
 			if ( ! root ) return;
 
-			var REST  = root.getAttribute( 'data-rest' ) + 'shop/v1/';
+			var REST  = root.getAttribute( 'data-rest' ) + 'counter/v1/';
 			var NONCE = root.getAttribute( 'data-nonce' );
 			var KIND  = root.getAttribute( 'data-kind' ) || 'page';
 			var activeHeaderId = parseInt( root.getAttribute( 'data-active-header' ), 10 ) || 0;

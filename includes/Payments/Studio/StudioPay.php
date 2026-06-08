@@ -51,15 +51,21 @@ final class StudioPay implements PSPGateway {
 	}
 
 	/**
-	 * Methods currently available — drives the checkout method strip.
-	 * Filters MethodRegistry::all() down to methods that have at least
-	 * one connected provider.
+	 * Methods currently available at checkout. A method is available iff:
+	 *   - the merchant has it enabled in Payments → Methods, AND
+	 *   - at least one of its providers has credentials saved.
+	 *
+	 * When the enabled-flag option isn't set yet (fresh install) we
+	 * fall back to "everything on" — same as the legacy behavior — so
+	 * upgrading doesn't silently hide methods.
 	 *
 	 * @return array<int, array<string,mixed>>
 	 */
 	public function availableMethods(): array {
+		$enabled = get_option( 'counter_studio_pay_methods_enabled' );
 		$out = [];
 		foreach ( MethodRegistry::all() as $m ) {
+			if ( is_array( $enabled ) && ! ( $enabled[ $m['id'] ] ?? true ) ) continue;
 			if ( $this->providerForMethod( $m['id'] ) !== null ) $out[] = $m;
 		}
 		return $out;

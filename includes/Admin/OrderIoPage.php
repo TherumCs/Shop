@@ -17,19 +17,30 @@ final class OrderIoPage {
 		?>
 		<div class="wrap counter-admin">
 			<h1 class="counter-admin__title">
-				<span class="counter-admin__mark">T</span> Order Import / Export
+				<span class="counter-admin__mark">T</span> Manage Data
 			</h1>
+			<?php SectionTabs::render( 'counter-import' ); ?>
+			<?php $this->renderBody(); ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Inner body only — page chrome is the caller's responsibility.
+	 * Used by ImportExportPage to embed this view as a sub-tab.
+	 */
+	public function renderBody(): void {
+		?>
 			<div
 				id="counter-order-io"
 				data-rest="<?php echo esc_url( rest_url() ); ?>"
 				data-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>"
 			></div>
-		</div>
 		<script>
 		( function () {
 			const root = document.getElementById( 'counter-order-io' );
 			if ( ! root ) return;
-			const REST  = root.getAttribute( 'data-rest' ) + 'shop/v1/';
+			const REST  = root.getAttribute( 'data-rest' ) + 'counter/v1/';
 			const NONCE = root.getAttribute( 'data-nonce' );
 			const api = ( path, opts ) => fetch( REST + path, Object.assign( {
 				credentials: 'same-origin',

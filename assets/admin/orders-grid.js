@@ -10,7 +10,7 @@
 	'use strict';
 
 	var cfg   = window.CounterAdminGridConfig || {};
-	var REST  = ( cfg.rest || '/wp-json/' ) + 'shop/v1/admin/';
+	var REST  = ( cfg.rest || '/wp-json/' ) + 'counter/v1/admin/';
 	var NONCE = cfg.nonce || '';
 
 	var root = document.querySelector( '[data-counter-grid="orders"]' );

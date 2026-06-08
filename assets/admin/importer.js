@@ -17,7 +17,7 @@
 	'use strict';
 
 	var cfg   = window.CounterImporterConfig || {};
-	var REST  = ( cfg.rest || '/wp-json/' ) + 'shop/v1/';
+	var REST  = ( cfg.rest || '/wp-json/' ) + 'counter/v1/';
 	var NONCE = cfg.nonce || '';
 
 	var root = document.querySelector( '[data-counter-importer]' );

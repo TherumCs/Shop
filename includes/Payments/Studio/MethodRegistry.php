@@ -36,15 +36,15 @@ final class MethodRegistry {
 
 			// ── Wallets ────────────────────────────────────────────
 			[ 'id' => 'apple_pay',    'group' => 'wallets', 'label' => 'Apple Pay',
-			  'providers' => [ 'stripe' ], 'needsRedirect' => false ],
+			  'providers' => [ 'stripe', 'square' ], 'needsRedirect' => false ],
 			[ 'id' => 'google_pay',   'group' => 'wallets', 'label' => 'Google Pay',
+			  'providers' => [ 'stripe', 'square' ], 'needsRedirect' => false ],
+			[ 'id' => 'link',         'group' => 'wallets', 'label' => 'Link (Stripe)',
 			  'providers' => [ 'stripe' ], 'needsRedirect' => false ],
-			[ 'id' => 'link',         'group' => 'wallets', 'label' => 'Link',
-			  'providers' => [ 'stripe' ], 'needsRedirect' => false ],
-			[ 'id' => 'counter_pay',     'group' => 'wallets', 'label' => 'Shop Pay',
-			  'providers' => [ 'stripe' ], 'needsRedirect' => true  ],
 			[ 'id' => 'paypal',       'group' => 'wallets', 'label' => 'PayPal',
 			  'providers' => [ 'paypal' ], 'needsRedirect' => true  ],
+			[ 'id' => 'shop_pay',     'group' => 'wallets', 'label' => 'Shop Pay',
+			  'providers' => [ 'shop_pay' ], 'needsRedirect' => true  ],
 
 			// ── BNPL ────────────────────────────────────────────────
 			[ 'id' => 'klarna',        'group' => 'bnpl', 'label' => 'Klarna',
@@ -56,7 +56,7 @@ final class MethodRegistry {
 			[ 'id' => 'sezzle',        'group' => 'bnpl', 'label' => 'Sezzle',
 			  'providers' => [ 'sezzle' ], 'needsRedirect' => true ],
 			[ 'id' => 'zip',           'group' => 'bnpl', 'label' => 'Zip',
-			  'providers' => [ 'stripe' ], 'needsRedirect' => true ],
+			  'providers' => [ 'zip' ], 'needsRedirect' => true ],
 			[ 'id' => 'paypal_credit', 'group' => 'bnpl', 'label' => 'PayPal Credit',
 			  'providers' => [ 'paypal' ], 'needsRedirect' => true ],
 
@@ -65,12 +65,36 @@ final class MethodRegistry {
 			  'providers' => [ 'plaid', 'stripe' ], 'needsRedirect' => true ],
 
 			// ── Crypto ──────────────────────────────────────────────
-			[ 'id' => 'crypto',        'group' => 'crypto', 'label' => 'Crypto',
+			// Each coin is its own toggle so merchants can enable
+			// individual chains. AnyPay handles the underlying rail —
+			// the method id tells it which coin to quote.
+			[ 'id' => 'crypto_btc',  'group' => 'crypto', 'label' => 'Bitcoin (BTC)',
+			  'providers' => [ 'crypto' ], 'needsRedirect' => true ],
+			[ 'id' => 'crypto_eth',  'group' => 'crypto', 'label' => 'Ethereum (ETH)',
+			  'providers' => [ 'crypto' ], 'needsRedirect' => true ],
+			[ 'id' => 'crypto_usdc', 'group' => 'crypto', 'label' => 'USD Coin (USDC)',
+			  'providers' => [ 'crypto' ], 'needsRedirect' => true ],
+			[ 'id' => 'crypto_usdt', 'group' => 'crypto', 'label' => 'Tether (USDT)',
+			  'providers' => [ 'crypto' ], 'needsRedirect' => true ],
+			[ 'id' => 'crypto_sol',  'group' => 'crypto', 'label' => 'Solana (SOL)',
+			  'providers' => [ 'crypto' ], 'needsRedirect' => true ],
+			[ 'id' => 'crypto_xrp',  'group' => 'crypto', 'label' => 'XRP',
+			  'providers' => [ 'crypto' ], 'needsRedirect' => true ],
+			[ 'id' => 'crypto_link', 'group' => 'crypto', 'label' => 'Chainlink (LINK)',
+			  'providers' => [ 'crypto' ], 'needsRedirect' => true ],
+			[ 'id' => 'crypto_xlm',  'group' => 'crypto', 'label' => 'Stellar (XLM)',
+			  'providers' => [ 'crypto' ], 'needsRedirect' => true ],
+			[ 'id' => 'crypto_hbar', 'group' => 'crypto', 'label' => 'Hedera (HBAR)',
 			  'providers' => [ 'crypto' ], 'needsRedirect' => true ],
 
 			// ── P2P ─────────────────────────────────────────────────
+			// Cash App: Stripe is primary so funds land in the unified
+			// Stripe balance (then instant-payout to Square Debit Card).
+			// Square is the fallback for merchants who don't run Stripe.
 			[ 'id' => 'cashapp',       'group' => 'p2p', 'label' => 'Cash App',
-			  'providers' => [ 'square', 'stripe' ], 'needsRedirect' => true ],
+			  'providers' => [ 'stripe', 'square' ], 'needsRedirect' => true ],
+			// Venmo + PP Credit + PayPal all render via PayPal Smart Buttons
+			// — one connector, three visible funding sources.
 			[ 'id' => 'venmo',         'group' => 'p2p', 'label' => 'Venmo',
 			  'providers' => [ 'paypal' ], 'needsRedirect' => true ],
 			[ 'id' => 'zelle',         'group' => 'p2p', 'label' => 'Zelle',

@@ -24,7 +24,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'COUNTER_VERSION', '0.29.6' );
+define( 'COUNTER_VERSION', '0.39.0' );
 define( 'COUNTER_FILE', __FILE__ );
 define( 'COUNTER_DIR', plugin_dir_path( __FILE__ ) );
 define( 'COUNTER_URL', plugin_dir_url( __FILE__ ) );
@@ -258,20 +258,33 @@ function counter_register_container_bindings(): void {
 	);
 
 	// ─── Payment providers (Studio Pay underlying rails) ───────────────
-	$c->singleton( \Counter\Payments\Providers\StripeProvider::class, fn() => new \Counter\Payments\Providers\StripeProvider() );
-	$c->singleton( \Counter\Payments\Providers\SquareProvider::class, fn() => new \Counter\Payments\Providers\SquareProvider() );
-	$c->singleton( \Counter\Payments\Providers\PayPalProvider::class, fn() => new \Counter\Payments\Providers\PayPalProvider() );
-	$c->singleton( \Counter\Payments\Providers\PlaidProvider::class,  fn() => new \Counter\Payments\Providers\PlaidProvider() );
+	$c->singleton( \Counter\Payments\Providers\StripeProvider::class,  fn() => new \Counter\Payments\Providers\StripeProvider() );
+	$c->singleton( \Counter\Payments\Providers\SquareProvider::class,  fn() => new \Counter\Payments\Providers\SquareProvider() );
+	$c->singleton( \Counter\Payments\Providers\PayPalProvider::class,  fn() => new \Counter\Payments\Providers\PayPalProvider() );
+	$c->singleton( \Counter\Payments\Providers\PlaidProvider::class,   fn() => new \Counter\Payments\Providers\PlaidProvider() );
+	$c->singleton( \Counter\Payments\Providers\SezzleProvider::class,  fn() => new \Counter\Payments\Providers\SezzleProvider() );
+	$c->singleton( \Counter\Payments\Providers\ZipProvider::class,     fn() => new \Counter\Payments\Providers\ZipProvider() );
+	$c->singleton( \Counter\Payments\Providers\CryptoProvider::class,  fn() => new \Counter\Payments\Providers\CryptoProvider() );
+	$c->singleton( \Counter\Payments\Providers\ZelleProvider::class,   fn() => new \Counter\Payments\Providers\ZelleProvider() );
+	$c->singleton( \Counter\Payments\Providers\ShopPayProvider::class, fn( $c ) =>
+		new \Counter\Payments\Providers\ShopPayProvider(
+			$c->get( \Counter\Payments\Providers\StripeProvider::class ),
+		)
+	);
 
 	$c->singleton( \Counter\Payments\Studio\StudioPay::class, function ( $c ) {
 		$providers = [
-			'stripe' => $c->get( \Counter\Payments\Providers\StripeProvider::class ),
-			'square' => $c->get( \Counter\Payments\Providers\SquareProvider::class ),
-			'paypal' => $c->get( \Counter\Payments\Providers\PayPalProvider::class ),
-			'plaid'  => $c->get( \Counter\Payments\Providers\PlaidProvider::class ),
+			'stripe'   => $c->get( \Counter\Payments\Providers\StripeProvider::class ),
+			'square'   => $c->get( \Counter\Payments\Providers\SquareProvider::class ),
+			'paypal'   => $c->get( \Counter\Payments\Providers\PayPalProvider::class ),
+			'plaid'    => $c->get( \Counter\Payments\Providers\PlaidProvider::class ),
+			'sezzle'   => $c->get( \Counter\Payments\Providers\SezzleProvider::class ),
+			'zip'      => $c->get( \Counter\Payments\Providers\ZipProvider::class ),
+			'crypto'   => $c->get( \Counter\Payments\Providers\CryptoProvider::class ),
+			'zelle'    => $c->get( \Counter\Payments\Providers\ZelleProvider::class ),
+			'shop_pay' => $c->get( \Counter\Payments\Providers\ShopPayProvider::class ),
 		];
-		// Filter for `apply_filters( 'counter_studio_pay_providers', $providers )` so
-		// 3rd-party adapters (Sezzle, crypto, Zelle) can register themselves.
+		// Filter for 3rd-party adapters to register themselves.
 		$providers = apply_filters( 'counter_studio_pay_providers', $providers );
 		return new \Counter\Payments\Studio\StudioPay( $providers );
 	} );
@@ -550,6 +563,15 @@ function counter_register_container_bindings(): void {
 	);
 
 	// ─── Admin UI ──────────────────────────────────────────────────────
+	$c->singleton( \Counter\Admin\DashboardPage::class,  fn() => new \Counter\Admin\DashboardPage() );
+	$c->singleton( \Counter\Admin\CategoriesPage::class, fn() => new \Counter\Admin\CategoriesPage() );
+	$c->singleton( \Counter\Admin\ImportExportPage::class, fn( $c ) =>
+		new \Counter\Admin\ImportExportPage(
+			$c->get( \Counter\Admin\ImporterPage::class ),
+			$c->get( \Counter\Admin\OrderIoPage::class ),
+			$c->get( \Counter\Admin\CustomersPage::class ),
+		)
+	);
 	$c->singleton( \Counter\Admin\SettingsPage::class, fn() => new \Counter\Admin\SettingsPage() );
 	$c->singleton( \Counter\Admin\ImporterPage::class, fn( $c ) =>
 		new \Counter\Admin\ImporterPage(
@@ -596,6 +618,9 @@ function counter_register_container_bindings(): void {
 			$c->get( \Counter\Admin\ProductCategoryOrderPage::class ),
 			$c->get( \Counter\Admin\ProductVariantOrderPage::class ),
 			$c->get( \Counter\Admin\CustomTaxonomyOrderPage::class ),
+			$c->get( \Counter\Admin\DashboardPage::class ),
+			$c->get( \Counter\Admin\CategoriesPage::class ),
+			$c->get( \Counter\Admin\ImportExportPage::class ),
 		)
 	);
 
@@ -726,6 +751,25 @@ add_action( 'wp_enqueue_scripts', function (): void {
 		wp_enqueue_style(  'counter-checkout-studio' );
 		wp_enqueue_script( 'counter-checkout-studio' );
 	}
+
+	// PayPal Smart Buttons — mounts visible PayPal / Venmo / PP-Credit
+	// buttons on the checkout page IF PayPal is connected. The script
+	// itself reads /studio-pay/paypal-config and no-ops gracefully when
+	// PayPal isn't configured, so it's safe to enqueue universally on
+	// the checkout view.
+	wp_register_script( 'counter-paypal-smart-buttons',
+		COUNTER_URL . 'assets/checkout/paypal-smart-buttons.js',
+		[], COUNTER_VERSION,
+		[ 'in_footer' => true, 'strategy' => 'defer' ]
+	);
+	wp_add_inline_script( 'counter-paypal-smart-buttons',
+		'window.CounterCheckoutConfig = ' . wp_json_encode( [
+			'rest'  => esc_url_raw( rest_url() ),
+			'nonce' => wp_create_nonce( 'wp_rest' ),
+		] ) . ';',
+		'before'
+	);
+	wp_enqueue_script( 'counter-paypal-smart-buttons' );
 } );
 
 // ─── Floating button injection ─────────────────────────────────────────────

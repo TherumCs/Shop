@@ -17,7 +17,7 @@
 	const root = document.querySelector( '.counter-checkout--studio' );
 	if ( ! root ) return;
 
-	const REST  = root.getAttribute( 'data-rest' ) + 'shop/v1/';
+	const REST  = root.getAttribute( 'data-rest' ) + 'counter/v1/';
 	const NONCE = root.getAttribute( 'data-nonce' );
 	const methodsEl = root.querySelector( '[data-counter-methods]' );
 	const panelsEl  = root.querySelector( '[data-counter-panels]' );
