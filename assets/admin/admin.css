@@ -300,6 +300,13 @@
 
 .counter-grid__scroll { overflow-x: auto; }
 
+/* List/Grid view toggle — the JS sets [hidden] on whichever view is
+   inactive. Without this rule, the [hidden] attribute is overridden by
+   the display:grid / overflow-x:auto declarations on the targets and
+   both views render at once. */
+.counter-grid__scroll[hidden],
+.counter-grid__cards[hidden]  { display: none !important; }
+
 /* View-mode toggle (List ⇄ Grid) */
 .counter-grid__view {
 	display: inline-flex;
