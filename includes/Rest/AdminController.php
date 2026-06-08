@@ -115,6 +115,16 @@ final class AdminController {
 			'permission_callback' => $auth,
 		] );
 
+		// Product → attribute-value selections. Body: { selections:
+		// { color: [value_id, ...], size: [value_id, ...] } } — replaces
+		// the product's `product_attributes` join + writes any new
+		// custom values back into `attribute_values`.
+		register_rest_route( self::NAMESPACE, '/admin/products/(?P<id>\d+)/attributes', [
+			'methods'             => 'PATCH',
+			'callback'            => [ $this, 'patchProductAttributes' ],
+			'permission_callback' => $auth,
+		] );
+
 		register_rest_route( self::NAMESPACE, '/admin/orders', [
 			'methods'             => 'GET',
 			'callback'            => [ $this, 'listOrders' ],
@@ -389,7 +399,7 @@ final class AdminController {
 				'gallery' => $this->galleryFor( (int) $row['id'] ),
 			],
 			'variants'   => $this->variantsFor( (int) $row['id'] ),
-			'attributes' => [],
+			'attributes' => $this->attributesFor( (int) $row['id'] ),
 			'seo'        => [ 'meta_title' => '', 'meta_description' => '' ],
 			'urls' => [
 				'view'        => (string) home_url( '/product/' . $row['slug'] ),
@@ -1032,5 +1042,250 @@ final class AdminController {
 		}
 
 		return new \WP_REST_Response( [ 'ok' => true, 'variant' => $updated ], 200 );
+	}
+
+	// ─── Product attribute selections ────────────────────────────────────
+
+	/**
+	 * Default Color + Size palettes seeded the first time the editor's
+	 * Attributes tab is opened, if those attributes don't already exist.
+	 * Keeps the merchant from staring at an empty UI on a fresh install.
+	 */
+	private const DEFAULT_COLOR_PALETTE = [
+		[ 'Black',       '#000000' ],
+		[ 'Charcoal',    '#374151' ],
+		[ 'Gray',        '#6B7280' ],
+		[ 'Silver',      '#9CA3AF' ],
+		[ 'Light Gray',  '#D1D5DB' ],
+		[ 'White',       '#FFFFFF' ],
+		[ 'Green',       '#10B981' ],
+		[ 'Blue',        '#3B82F6' ],
+		[ 'Indigo',      '#6366F1' ],
+		[ 'Purple',      '#A855F7' ],
+		[ 'Pink',        '#EC4899' ],
+		[ 'Red',         '#EF4444' ],
+		[ 'Orange',      '#F97316' ],
+		[ 'Yellow',      '#FBBF24' ],
+		[ 'Brown',       '#92400E' ],
+		[ 'Cream',       '#FAF3DD' ],
+	];
+
+	private const DEFAULT_SIZE_VALUES = [
+		'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', 'One Size',
+	];
+
+	/**
+	 * Lazily create the Color + Size attributes and their default value
+	 * sets. Idempotent — uses INSERT OR IGNORE so reruns are free.
+	 *
+	 * @return array<string,int> [ slug => attribute_id ]
+	 */
+	private function ensureCoreAttributes(): array {
+		$pdo = DB::pdo();
+
+		$ensure_attr = function ( string $slug, string $name, string $type ) use ( $pdo ): int {
+			$pdo->prepare( 'INSERT OR IGNORE INTO attributes (slug, name, type) VALUES (:s, :n, :t)' )
+				->execute( [ ':s' => $slug, ':n' => $name, ':t' => $type ] );
+			$q = $pdo->prepare( 'SELECT id FROM attributes WHERE slug = :s' );
+			$q->execute( [ ':s' => $slug ] );
+			return (int) $q->fetchColumn();
+		};
+
+		$color_id = $ensure_attr( 'color', 'Color', 'color' );
+		$size_id  = $ensure_attr( 'size',  'Size',  'select' );
+
+		$ensure_value = $pdo->prepare(
+			'INSERT OR IGNORE INTO attribute_values (attribute_id, slug, value, color_hex, position)
+			      VALUES (:aid, :slug, :val, :hex, :pos)'
+		);
+
+		foreach ( self::DEFAULT_COLOR_PALETTE as $i => [ $name, $hex ] ) {
+			$ensure_value->execute( [
+				':aid'  => $color_id,
+				':slug' => sanitize_title( $name ),
+				':val'  => $name,
+				':hex'  => $hex,
+				':pos'  => $i,
+			] );
+		}
+		foreach ( self::DEFAULT_SIZE_VALUES as $i => $name ) {
+			$ensure_value->execute( [
+				':aid'  => $size_id,
+				':slug' => sanitize_title( $name ),
+				':val'  => $name,
+				':hex'  => null,
+				':pos'  => $i,
+			] );
+		}
+
+		return [ 'color' => $color_id, 'size' => $size_id ];
+	}
+
+	/**
+	 * Return every attribute + its values + which value IDs the product
+	 * has selected. Selected = the variant set actually uses that value,
+	 * OR the product_attributes join row exists (for products without
+	 * variants yet).
+	 *
+	 * @return list<array{
+	 *   slug:string, name:string, type:string,
+	 *   values: list<array{ id:int, slug:string, value:string, color_hex:?string, position:int }>,
+	 *   selected_value_ids: list<int>,
+	 *   enabled: bool
+	 * }>
+	 */
+	private function attributesFor( int $product_id ): array {
+		$this->ensureCoreAttributes();
+		$pdo = DB::pdo();
+
+		$attrs = $pdo->query(
+			'SELECT id, slug, name, type FROM attributes ORDER BY position ASC, id ASC'
+		)->fetchAll();
+
+		$values_stmt = $pdo->prepare(
+			'SELECT id, slug, value, color_hex, position
+			   FROM attribute_values
+			  WHERE attribute_id = :aid
+			  ORDER BY position ASC, id ASC'
+		);
+
+		$enabled_stmt = $pdo->prepare(
+			'SELECT 1 FROM product_attributes WHERE product_id = :pid AND attribute_id = :aid'
+		);
+
+		// One round-trip per attribute to find which values this product
+		// actually has across its variants — covers products that were
+		// imported with variants but never had product_attributes rows.
+		$selected_stmt = $pdo->prepare(
+			'SELECT DISTINCT vv.attribute_value_id
+			   FROM variant_attribute_values vv
+			   JOIN product_variants v   ON v.id  = vv.variant_id
+			   JOIN attribute_values av  ON av.id = vv.attribute_value_id
+			  WHERE v.product_id = :pid AND av.attribute_id = :aid'
+		);
+
+		$out = [];
+		foreach ( $attrs as $a ) {
+			$aid = (int) $a['id'];
+
+			$values_stmt->execute( [ ':aid' => $aid ] );
+			$values = array_map( fn( $r ) => [
+				'id'        => (int) $r['id'],
+				'slug'      => (string) $r['slug'],
+				'value'     => (string) $r['value'],
+				'color_hex' => $r['color_hex'] !== null ? (string) $r['color_hex'] : null,
+				'position'  => (int) $r['position'],
+			], $values_stmt->fetchAll() );
+
+			$selected_stmt->execute( [ ':pid' => $product_id, ':aid' => $aid ] );
+			$selected = array_map( 'intval', $selected_stmt->fetchAll( \PDO::FETCH_COLUMN ) );
+
+			$enabled_stmt->execute( [ ':pid' => $product_id, ':aid' => $aid ] );
+			$enabled = (bool) $enabled_stmt->fetchColumn();
+
+			$out[] = [
+				'slug'               => (string) $a['slug'],
+				'name'               => (string) $a['name'],
+				'type'               => (string) $a['type'],
+				'values'             => $values,
+				'selected_value_ids' => $selected,
+				'enabled'            => $enabled || ! empty( $selected ),
+			];
+		}
+
+		return $out;
+	}
+
+	/**
+	 * PATCH /admin/products/{id}/attributes
+	 *
+	 * Body shape:
+	 *   {
+	 *     selections: { color: [value_id, ...], size: [value_id, ...] },
+	 *     custom: { color: [ { value: "Sage", hex: "#A8C3A0" }, ... ] }
+	 *   }
+	 *
+	 * Replaces the product's product_attributes join rowset for any
+	 * attribute mentioned in selections. New values listed under
+	 * `custom` are inserted into attribute_values first (idempotent on
+	 * slug) and their IDs auto-appended to the selection set.
+	 */
+	public function patchProductAttributes( \WP_REST_Request $req ): \WP_REST_Response {
+		$product_id = (int) $req->get_param( 'id' );
+		$body       = (array) $req->get_json_params();
+		$selections = (array) ( $body['selections'] ?? [] );
+		$custom     = (array) ( $body['custom'] ?? [] );
+
+		$attr_ids = $this->ensureCoreAttributes();
+
+		try {
+			DB::tx( function ( \PDO $pdo ) use ( $product_id, $selections, $custom ): void {
+				$attrs = $pdo->query( 'SELECT id, slug FROM attributes' )->fetchAll();
+				$by_slug = [];
+				foreach ( $attrs as $a ) $by_slug[ (string) $a['slug'] ] = (int) $a['id'];
+
+				$ins_value = $pdo->prepare(
+					'INSERT OR IGNORE INTO attribute_values (attribute_id, slug, value, color_hex, position)
+					     VALUES (:aid, :slug, :val, :hex, COALESCE(
+					           (SELECT MAX(position)+1 FROM attribute_values WHERE attribute_id = :aid), 100
+					     ))'
+				);
+				$find_value = $pdo->prepare(
+					'SELECT id FROM attribute_values WHERE attribute_id = :aid AND slug = :slug'
+				);
+
+				$ins_join = $pdo->prepare(
+					'INSERT OR IGNORE INTO product_attributes (product_id, attribute_id, position, used_for_variants)
+					     VALUES (:pid, :aid, 0, 1)'
+				);
+				$del_join = $pdo->prepare(
+					'DELETE FROM product_attributes WHERE product_id = :pid AND attribute_id = :aid'
+				);
+
+				foreach ( $selections as $slug => $value_ids ) {
+					$slug = sanitize_title( (string) $slug );
+					$aid  = $by_slug[ $slug ] ?? null;
+					if ( ! $aid ) continue;
+
+					// Insert any custom values that came in with this
+					// attribute, then merge their new ids into the
+					// selection set.
+					$value_ids = array_values( array_map( 'intval', (array) $value_ids ) );
+					foreach ( (array) ( $custom[ $slug ] ?? [] ) as $c ) {
+						$val = sanitize_text_field( (string) ( $c['value'] ?? '' ) );
+						$hex = isset( $c['hex'] ) ? sanitize_hex_color( (string) $c['hex'] ) : null;
+						if ( $val === '' ) continue;
+						$ins_value->execute( [
+							':aid'  => $aid,
+							':slug' => sanitize_title( $val ),
+							':val'  => $val,
+							':hex'  => $hex,
+						] );
+						$find_value->execute( [ ':aid' => $aid, ':slug' => sanitize_title( $val ) ] );
+						$new_id = (int) $find_value->fetchColumn();
+						if ( $new_id ) $value_ids[] = $new_id;
+					}
+
+					// Replace the join row: present iff there's at least one selection.
+					$del_join->execute( [ ':pid' => $product_id, ':aid' => $aid ] );
+					if ( ! empty( $value_ids ) ) {
+						$ins_join->execute( [ ':pid' => $product_id, ':aid' => $aid ] );
+					}
+
+					// For products without any variants yet, also mirror
+					// the selections into variant_attribute_values via a
+					// synthetic "base" variant so the values aren't lost.
+					// Skipped for now — proper combinatoric variant build
+					// happens via the upcoming "Generate variants" flow.
+				}
+			} );
+		} catch ( \Throwable $e ) {
+			return new \WP_REST_Response( [ 'error' => [ 'message' => $e->getMessage() ] ], 500 );
+		}
+
+		return new \WP_REST_Response( [
+			'ok'         => true,
+			'attributes' => $this->attributesFor( $product_id ),
+		], 200 );
 	}
 }

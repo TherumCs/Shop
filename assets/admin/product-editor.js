@@ -54,13 +54,14 @@ function api( path, opts ) {
 }
 
 const TABS = [
-	{ id: 'general',   label: 'General' },
-	{ id: 'pricing',   label: 'Pricing' },
-	{ id: 'variants',  label: 'Variants' },
-	{ id: 'inventory', label: 'Inventory' },
-	{ id: 'shipping',  label: 'Shipping' },
-	{ id: 'media',     label: 'Media' },
-	{ id: 'seo',       label: 'SEO' },
+	{ id: 'general',    label: 'General' },
+	{ id: 'pricing',    label: 'Pricing' },
+	{ id: 'attributes', label: 'Attributes' },
+	{ id: 'variants',   label: 'Variants' },
+	{ id: 'inventory',  label: 'Inventory' },
+	{ id: 'shipping',   label: 'Shipping' },
+	{ id: 'media',      label: 'Media' },
+	{ id: 'seo',        label: 'SEO' },
 ];
 
 function fmtAgo( ts ) {
@@ -227,14 +228,15 @@ function Drawer() {
 
 function renderTab( tab, p, update ) {
 	switch ( tab ) {
-		case 'general':   return html`<${ Tab_General }   p=${ p } update=${ update } />`;
-		case 'pricing':   return html`<${ Tab_Pricing }   p=${ p } update=${ update } />`;
-		case 'inventory': return html`<${ Tab_Inventory } p=${ p } update=${ update } />`;
-		case 'variants':  return html`<${ Tab_Variants }  p=${ p } update=${ update } />`;
-		case 'shipping':  return html`<${ Tab_Shipping }  p=${ p } update=${ update } />`;
-		case 'media':     return html`<${ Tab_Media }     p=${ p } update=${ update } />`;
-		case 'seo':       return html`<${ Tab_SEO }       p=${ p } update=${ update } />`;
-		default:          return null;
+		case 'general':    return html`<${ Tab_General }    p=${ p } update=${ update } />`;
+		case 'pricing':    return html`<${ Tab_Pricing }    p=${ p } update=${ update } />`;
+		case 'attributes': return html`<${ Tab_Attributes } p=${ p } update=${ update } />`;
+		case 'inventory':  return html`<${ Tab_Inventory }  p=${ p } update=${ update } />`;
+		case 'variants':   return html`<${ Tab_Variants }   p=${ p } update=${ update } />`;
+		case 'shipping':   return html`<${ Tab_Shipping }   p=${ p } update=${ update } />`;
+		case 'media':      return html`<${ Tab_Media }      p=${ p } update=${ update } />`;
+		case 'seo':        return html`<${ Tab_SEO }        p=${ p } update=${ update } />`;
+		default:           return null;
 	}
 }
 
@@ -386,6 +388,128 @@ function Tab_Inventory( { p, update } ) {
 // Inline-editable variant row. Each cell is a controlled input that
 // PATCHes /admin/variants/{id} on blur. Prices are typed in dollars but
 // stored in cents on the server.
+// Attributes tab — pick which colors / sizes / etc this product comes
+// in. Color values render as swatch chips driven by their hex; other
+// attributes render as text pill toggles. A "Custom" row at the end of
+// each section adds a new value to the global attribute_values table
+// and selects it for this product in one save.
+function Tab_Attributes( { p, update } ) {
+	const [ groups,    setGroups    ] = useState( p.attributes || [] );
+	const [ saving,    setSaving    ] = useState( false );
+	const [ err,       setErr       ] = useState( '' );
+
+	useEffect( () => { setGroups( p.attributes || [] ); }, [ p.id ] );
+
+	function persist( nextGroups, customMap ) {
+		setSaving( true );
+		setErr( '' );
+		const selections = {};
+		nextGroups.forEach( g => {
+			selections[ g.slug ] = ( g.selected_value_ids || [] ).slice();
+		} );
+		api( 'products/' + p.id + '/attributes', {
+			method: 'PATCH',
+			body: JSON.stringify( { selections, custom: customMap || {} } ),
+		} ).then( r => {
+			if ( r.error ) setErr( r.error.message || 'Save failed.' );
+			else if ( r.attributes ) {
+				setGroups( r.attributes );
+				if ( update ) update( 'attributes', r.attributes );
+			}
+		} ).catch( e => setErr( e.message || 'Save failed.' ) )
+		   .finally( () => setSaving( false ) );
+	}
+
+	function toggleValue( groupSlug, valueId ) {
+		const next = groups.map( g => {
+			if ( g.slug !== groupSlug ) return g;
+			const has  = ( g.selected_value_ids || [] ).includes( valueId );
+			const ids  = has
+				? g.selected_value_ids.filter( id => id !== valueId )
+				: [ ...( g.selected_value_ids || [] ), valueId ];
+			return { ...g, selected_value_ids: ids };
+		} );
+		setGroups( next );
+		persist( next, null );
+	}
+
+	function addCustom( groupSlug, value, hex ) {
+		if ( ! value ) return;
+		persist( groups, { [ groupSlug ]: [ { value, hex } ] } );
+	}
+
+	return html`
+		<div class="counter-pe-rows">
+			<div class="counter-pe-attr__status">
+				${ saving ? html`<span class="counter-pe-pill">Saving…</span>` : null }
+				${ err    ? html`<span class="counter-pe-pill counter-pe-pill--err">${ err }</span>` : null }
+				<span class="counter-pe-attr__hint">Pick which values this product comes in. Each selection feeds the Variants tab.</span>
+			</div>
+			${ groups.map( g => html`<${ AttrGroup } key=${ g.slug } group=${ g } onToggle=${ toggleValue } onCustom=${ addCustom } />` ) }
+			${ groups.length === 0 ? html`<p class="counter-pe-media-hint">No attributes registered yet. The defaults (Color + Size) seed automatically on next load — reopen this product.</p>` : null }
+		</div>
+	`;
+}
+
+function AttrGroup( { group, onToggle, onCustom } ) {
+	const isColor = group.type === 'color' || group.slug === 'color';
+	const [ customVal, setCustomVal ] = useState( '' );
+	const [ customHex, setCustomHex ] = useState( '#6366F1' );
+	const selected = new Set( group.selected_value_ids || [] );
+
+	function submitCustom() {
+		const v = customVal.trim();
+		if ( ! v ) return;
+		onCustom( group.slug, v, isColor ? customHex : null );
+		setCustomVal( '' );
+	}
+
+	return html`
+		<section class="counter-pe-attr">
+			<header class="counter-pe-attr__head">
+				<h3>${ group.name }</h3>
+				<span class="counter-pe-attr__count">${ ( group.selected_value_ids || [] ).length } selected</span>
+			</header>
+
+			<div class=${ isColor ? 'counter-pe-attr__swatches' : 'counter-pe-attr__pills' }>
+				${ ( group.values || [] ).map( val => {
+					const on = selected.has( val.id );
+					return isColor
+						? html`
+							<button type="button"
+								class=${ "counter-pe-swatch" + ( on ? " is-on" : "" ) + ( ( val.color_hex || '' ).toUpperCase() === '#FFFFFF' ? " counter-pe-swatch--white" : "" ) }
+								style=${ "background:" + ( val.color_hex || '#ccc' ) }
+								title=${ val.value }
+								onClick=${ () => onToggle( group.slug, val.id ) }></button>
+						`
+						: html`
+							<button type="button"
+								class=${ "counter-pe-pill-tog" + ( on ? " is-on" : "" ) }
+								onClick=${ () => onToggle( group.slug, val.id ) }>${ val.value }</button>
+						`;
+				} ) }
+			</div>
+
+			<div class="counter-pe-attr__custom">
+				<span class="counter-pe-attr__custom-label">Custom</span>
+				${ isColor ? html`
+					<input type="color" class="counter-pe-attr__color-picker" value=${ customHex }
+						onInput=${ e => setCustomHex( e.target.value ) } />
+				` : null }
+				<input type="text" class="counter-pe-attr__custom-input"
+					placeholder=${ isColor ? 'e.g. Sage' : 'e.g. XXS' }
+					value=${ customVal }
+					onInput=${ e => setCustomVal( e.target.value ) }
+					onKeyDown=${ e => { if ( e.key === 'Enter' ) submitCustom(); } } />
+				${ isColor ? html`
+					<code class="counter-pe-attr__hex">${ customHex.toUpperCase() }</code>
+				` : null }
+				<button type="button" class="button button-small" onClick=${ submitCustom } disabled=${ ! customVal.trim() }>Add</button>
+			</div>
+		</section>
+	`;
+}
+
 function VariantRow( { v } ) {
 	const [ row,    setRow    ] = useState( v );
 	const [ saving, setSaving ] = useState( null ); // field name being saved
