@@ -120,9 +120,8 @@ final class AdminController {
 		// the product's `product_attributes` join + writes any new
 		// custom values back into `attribute_values`.
 		register_rest_route( self::NAMESPACE, '/admin/products/(?P<id>\d+)/attributes', [
-			'methods'             => 'PATCH',
-			'callback'            => [ $this, 'patchProductAttributes' ],
-			'permission_callback' => $auth,
+			[ 'methods' => 'GET',   'callback' => [ $this, 'getProductAttributes' ],   'permission_callback' => $auth ],
+			[ 'methods' => 'PATCH', 'callback' => [ $this, 'patchProductAttributes' ], 'permission_callback' => $auth ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/admin/orders', [
@@ -1194,6 +1193,21 @@ final class AdminController {
 		}
 
 		return $out;
+	}
+
+	/**
+	 * GET /admin/products/{id}/attributes
+	 *
+	 * Returns the full attribute payload for a product (every attribute,
+	 * every value, which value IDs the product currently has selected).
+	 * Used by the editor's Attributes tab so it can always render fresh
+	 * data without relying on whatever was in the initial product GET.
+	 */
+	public function getProductAttributes( \WP_REST_Request $req ): \WP_REST_Response {
+		$product_id = (int) $req->get_param( 'id' );
+		return new \WP_REST_Response( [
+			'attributes' => $this->attributesFor( $product_id ),
+		], 200 );
 	}
 
 	/**

@@ -389,16 +389,22 @@ function Tab_Inventory( { p, update } ) {
 // PATCHes /admin/variants/{id} on blur. Prices are typed in dollars but
 // stored in cents on the server.
 // Attributes tab — pick which colors / sizes / etc this product comes
-// in. Color values render as swatch chips driven by their hex; other
-// attributes render as text pill toggles. A "Custom" row at the end of
-// each section adds a new value to the global attribute_values table
-// and selects it for this product in one save.
+// in. Self-fetches on mount via GET /admin/products/{id}/attributes so
+// the tab never depends on whatever was in the initial product GET
+// payload (which can be stale on cached opens or pre-v0.42 saves).
 function Tab_Attributes( { p, update } ) {
-	const [ groups,    setGroups    ] = useState( p.attributes || [] );
-	const [ saving,    setSaving    ] = useState( false );
-	const [ err,       setErr       ] = useState( '' );
+	const [ groups,  setGroups  ] = useState( null ); // null = loading, [] = loaded but empty
+	const [ saving,  setSaving  ] = useState( false );
+	const [ err,     setErr     ] = useState( '' );
 
-	useEffect( () => { setGroups( p.attributes || [] ); }, [ p.id ] );
+	// Fetch fresh on mount + whenever the open product changes.
+	useEffect( () => {
+		setGroups( null );
+		setErr( '' );
+		api( 'products/' + p.id + '/attributes' )
+			.then( r => setGroups( ( r && r.attributes ) || [] ) )
+			.catch( e => { setErr( e.message || 'Could not load attributes.' ); setGroups( [] ); } );
+	}, [ p.id ] );
 
 	function persist( nextGroups, customMap ) {
 		setSaving( true );
@@ -411,8 +417,7 @@ function Tab_Attributes( { p, update } ) {
 			method: 'PATCH',
 			body: JSON.stringify( { selections, custom: customMap || {} } ),
 		} ).then( r => {
-			if ( r.error ) setErr( r.error.message || 'Save failed.' );
-			else if ( r.attributes ) {
+			if ( r && r.attributes ) {
 				setGroups( r.attributes );
 				if ( update ) update( 'attributes', r.attributes );
 			}
@@ -421,7 +426,7 @@ function Tab_Attributes( { p, update } ) {
 	}
 
 	function toggleValue( groupSlug, valueId ) {
-		const next = groups.map( g => {
+		const next = ( groups || [] ).map( g => {
 			if ( g.slug !== groupSlug ) return g;
 			const has  = ( g.selected_value_ids || [] ).includes( valueId );
 			const ids  = has
@@ -435,18 +440,24 @@ function Tab_Attributes( { p, update } ) {
 
 	function addCustom( groupSlug, value, hex ) {
 		if ( ! value ) return;
-		persist( groups, { [ groupSlug ]: [ { value, hex } ] } );
+		persist( groups || [], { [ groupSlug ]: [ { value, hex } ] } );
+	}
+
+	// Loading state — shows while the initial GET is in flight.
+	if ( groups === null ) {
+		return html`<div class="counter-pe-rows"><div class="counter-pe__loading">Loading attributes…</div></div>`;
 	}
 
 	return html`
 		<div class="counter-pe-rows">
 			<div class="counter-pe-attr__status">
+				<span class="counter-pe-attr__hint">Pick which values this product comes in. Each selection feeds the Variants tab.</span>
 				${ saving ? html`<span class="counter-pe-pill">Saving…</span>` : null }
 				${ err    ? html`<span class="counter-pe-pill counter-pe-pill--err">${ err }</span>` : null }
-				<span class="counter-pe-attr__hint">Pick which values this product comes in. Each selection feeds the Variants tab.</span>
 			</div>
-			${ groups.map( g => html`<${ AttrGroup } key=${ g.slug } group=${ g } onToggle=${ toggleValue } onCustom=${ addCustom } />` ) }
-			${ groups.length === 0 ? html`<p class="counter-pe-media-hint">No attributes registered yet. The defaults (Color + Size) seed automatically on next load — reopen this product.</p>` : null }
+			${ groups.length === 0
+				? html`<div class="counter-pe-empty"><p>No attributes are registered yet. Add custom values below to start, or re-open the product to seed the Color + Size defaults.</p></div>`
+				: groups.map( g => html`<${ AttrGroup } key=${ g.slug } group=${ g } onToggle=${ toggleValue } onCustom=${ addCustom } />` ) }
 		</div>
 	`;
 }
@@ -472,22 +483,29 @@ function AttrGroup( { group, onToggle, onCustom } ) {
 			</header>
 
 			<div class=${ isColor ? 'counter-pe-attr__swatches' : 'counter-pe-attr__pills' }>
-				${ ( group.values || [] ).map( val => {
-					const on = selected.has( val.id );
-					return isColor
-						? html`
-							<button type="button"
-								class=${ "counter-pe-swatch" + ( on ? " is-on" : "" ) + ( ( val.color_hex || '' ).toUpperCase() === '#FFFFFF' ? " counter-pe-swatch--white" : "" ) }
-								style=${ "background:" + ( val.color_hex || '#ccc' ) }
-								title=${ val.value }
-								onClick=${ () => onToggle( group.slug, val.id ) }></button>
-						`
-						: html`
-							<button type="button"
-								class=${ "counter-pe-pill-tog" + ( on ? " is-on" : "" ) }
-								onClick=${ () => onToggle( group.slug, val.id ) }>${ val.value }</button>
-						`;
-				} ) }
+				${ ( group.values || [] ).length === 0
+					? html`<span class="counter-pe-attr__none">No values yet — add one below.</span>`
+					: ( group.values || [] ).map( val => {
+						const on  = selected.has( val.id );
+						const hex = val.color_hex || '#cccccc';
+						return isColor
+							? html`
+								<button type="button" key=${ val.id }
+									class=${ "counter-pe-swatch" + ( on ? " is-on" : "" ) + ( hex.toUpperCase() === '#FFFFFF' ? " counter-pe-swatch--white" : "" ) }
+									style=${ { background: hex } }
+									title=${ val.value + ( on ? ' (selected)' : '' ) }
+									aria-pressed=${ on ? 'true' : 'false' }
+									onClick=${ () => onToggle( group.slug, val.id ) }>
+									<span class="counter-pe-swatch__sr">${ val.value }</span>
+								</button>
+							`
+							: html`
+								<button type="button" key=${ val.id }
+									class=${ "counter-pe-pill-tog" + ( on ? " is-on" : "" ) }
+									aria-pressed=${ on ? 'true' : 'false' }
+									onClick=${ () => onToggle( group.slug, val.id ) }>${ val.value }</button>
+							`;
+					} ) }
 			</div>
 
 			<div class="counter-pe-attr__custom">

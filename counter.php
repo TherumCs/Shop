@@ -24,7 +24,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'COUNTER_VERSION', '0.42.1' );
+define( 'COUNTER_VERSION', '0.42.2' );
 define( 'COUNTER_FILE', __FILE__ );
 define( 'COUNTER_DIR', plugin_dir_path( __FILE__ ) );
 define( 'COUNTER_URL', plugin_dir_url( __FILE__ ) );
