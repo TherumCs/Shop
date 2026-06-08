@@ -25,49 +25,64 @@
 	--pe-e: .22s cubic-bezier(.22, .61, .36, 1);
 }
 
+/* Centered modal pattern (Untitled UI-style). Backdrop is a soft
+ * neutral that lets the WP admin chrome show through with reduced
+ * focus, then the card floats in the middle with rounded corners on
+ * all sides — replaces the previous right-side drawer. */
 .counter-pe-overlay {
 	position: fixed; inset: 0; z-index: 99998;
-	background: rgba(0, 0, 0, .35);
+	background: rgba(15, 23, 42, .45);
 	backdrop-filter: blur(4px);
-	animation: counter-pe-fade .2s ease-out;
+	display: flex; align-items: center; justify-content: center;
+	padding: 32px;
+	animation: counter-pe-fade .18s ease-out;
 }
 .counter-pe {
-	position: fixed; top: 0; right: 0; bottom: 0; z-index: 99999;
-	width: min(720px, 100vw);
+	position: relative; z-index: 99999;
+	width: 100%;
+	max-width: 1040px;
+	max-height: min( 90vh, 880px );
 	background: var(--pe-sf);
-	box-shadow: -16px 0 60px rgba(0, 0, 0, .18);
+	border-radius: 16px;
+	box-shadow: 0 24px 80px rgba(15, 23, 42, .22), 0 2px 8px rgba(15, 23, 42, .06);
 	display: flex; flex-direction: column;
-	animation: counter-pe-slide .28s cubic-bezier(.22, .61, .36, 1);
+	overflow: hidden;
+	animation: counter-pe-rise .22s cubic-bezier(.22, .61, .36, 1);
 	font: 14px/1.5 var(--pe-f);
 	color: var(--pe-tx);
 }
-@keyframes counter-pe-fade  { from { opacity: 0; } to { opacity: 1; } }
-@keyframes counter-pe-slide { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes counter-pe-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes counter-pe-rise {
+	from { opacity: 0; transform: translateY(12px) scale(.98); }
+	to   { opacity: 1; transform: translateY(0)    scale(1);   }
+}
 
-/* Header */
+/* Header — taller, brighter, matches the centered-card pattern. */
 .counter-pe__head {
 	display: flex; align-items: center; justify-content: space-between;
-	padding: 14px 22px;
-	background: rgba(255, 255, 255, .85);
-	backdrop-filter: blur(20px);
+	padding: 22px 28px;
+	background: #fff;
 	border-bottom: 1px solid var(--pe-bd);
-	gap: 12px;
+	gap: 16px;
+	flex-shrink: 0;
 }
 .counter-pe__head-l { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.counter-pe__head-r { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.counter-pe__head-r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .counter-pe__close {
-	width: 28px; height: 28px;
-	background: transparent; border: 0;
-	color: var(--pe-tx-3); cursor: pointer;
-	font-size: 16px; border-radius: 6px;
+	width: 32px; height: 32px;
+	background: var(--pe-sf-2); border: 0;
+	color: var(--pe-tx-2); cursor: pointer;
+	font-size: 16px; border-radius: 8px;
+	display: inline-flex; align-items: center; justify-content: center;
 	transition: background var(--pe-e), color var(--pe-e);
 }
-.counter-pe__close:hover { background: var(--pe-sf-2); color: var(--pe-tx); }
+.counter-pe__close:hover { background: var(--pe-bd); color: var(--pe-tx); }
 
 .counter-pe__title {
-	font: 700 16px var(--pe-f);
-	letter-spacing: -.01em;
-	max-width: 360px;
+	font: 700 20px var(--pe-f);
+	letter-spacing: -.02em;
+	color: #0f172a;
+	max-width: 540px;
 	white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .counter-pe__sub { display: flex; gap: 6px; margin-top: 4px; }
@@ -106,20 +121,21 @@
 }
 .counter-pe__woo:hover, .counter-pe__view:hover { background: var(--pe-sf-2); border-color: var(--pe-bd-2); }
 
-/* Tabs */
+/* Tabs — generous spacing, sits under the title header. */
 .counter-pe__tabs {
-	display: flex; gap: 0;
-	padding: 0 22px;
-	background: var(--pe-sf);
+	display: flex; gap: 8px;
+	padding: 0 28px;
+	background: #fff;
 	border-bottom: 1px solid var(--pe-bd);
 	overflow-x: auto;
 	scrollbar-width: none;
+	flex-shrink: 0;
 }
 .counter-pe__tabs::-webkit-scrollbar { display: none; }
 .counter-pe__tab {
 	background: transparent; border: 0;
-	padding: 14px 14px;
-	font: 600 13px var(--pe-f);
+	padding: 14px 6px;
+	font: 600 14px var(--pe-f);
 	color: var(--pe-tx-3);
 	cursor: pointer;
 	border-bottom: 2px solid transparent;
@@ -132,12 +148,49 @@
 	color: var(--pe-ac);
 	border-bottom-color: var(--pe-ac);
 }
+.counter-pe__tab + .counter-pe__tab { margin-left: 16px; }
 
 /* Body */
 .counter-pe__body {
 	flex: 1; overflow-y: auto;
-	padding: 24px 22px;
+	padding: 28px 32px 32px;
 	background: var(--pe-bg);
+	min-height: 0;
+}
+
+/* Footer — bold primary CTA on the right, quiet ghost cancel on the left.
+ * Matches the centered-card pattern in the reference: dark button +
+ * inline secondary action below/beside. */
+.counter-pe__foot {
+	display: flex; align-items: center; justify-content: flex-end;
+	gap: 10px;
+	padding: 16px 28px;
+	background: #fff;
+	border-top: 1px solid var(--pe-bd);
+	flex-shrink: 0;
+}
+.counter-pe__btn {
+	height: 40px; padding: 0 22px;
+	font: 600 14px var(--pe-f);
+	border-radius: 10px;
+	cursor: pointer;
+	border: 1px solid transparent;
+	transition: background var(--pe-e), border-color var(--pe-e), color var(--pe-e), transform var(--pe-e);
+}
+.counter-pe__btn:disabled { opacity: .55; cursor: not-allowed; }
+.counter-pe__btn--ghost {
+	background: #fff; color: var(--pe-tx-2); border-color: var(--pe-bd);
+}
+.counter-pe__btn--ghost:hover:not(:disabled) {
+	background: var(--pe-sf-2); color: var(--pe-tx); border-color: var(--pe-bd-2);
+}
+.counter-pe__btn--primary {
+	background: #0f172a; color: #fff;
+	box-shadow: 0 1px 2px rgba(15,23,42,.12);
+}
+.counter-pe__btn--primary:hover:not(:disabled) {
+	background: #1e293b; transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(15,23,42,.18);
 }
 .counter-pe__loading {
 	padding: 60px;

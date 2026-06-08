@@ -213,6 +213,13 @@ function Drawer() {
 						? html`<div class="counter-pe__loading counter-pe__loading--err">${ error }</div>`
 						: html`<div class="counter-pe__loading">Loading…</div>` }
 			</div>
+
+			<footer class="counter-pe__foot">
+				<button type="button" class="counter-pe__btn counter-pe__btn--ghost" onClick=${ close }>Cancel</button>
+				<button type="button" class="counter-pe__btn counter-pe__btn--primary" onClick=${ close } disabled=${ saving || ! product }>
+					${ saving ? 'Saving…' : 'Done' }
+				</button>
+			</footer>
 		</aside>
 	`;
 }
