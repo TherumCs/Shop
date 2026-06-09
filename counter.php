@@ -643,6 +643,12 @@ function counter_register_container_bindings(): void {
 			$c->get( \Counter\Services\ChromeResolver::class ),
 		)
 	);
+	// CategoryRouter — owns product_cat taxonomy + /c/{slug}/ URLs when
+	// Counter is the storefront engine (WC deactivated). Idempotent: only
+	// registers the taxonomy when another plugin hasn't already done so.
+	$c->singleton( \Counter\Services\CategoryRouter::class, fn() =>
+		new \Counter\Services\CategoryRouter()
+	);
 	$c->singleton( \Counter\Services\TemplateSeeder::class, fn( $c ) =>
 		new \Counter\Services\TemplateSeeder(
 			$c->get( \Counter\Repositories\PageRepository::class ),
@@ -912,6 +918,10 @@ add_action( 'plugins_loaded', function (): void {
 // Pure front-end routing. Mode helper short-circuits in Unlocked mode.
 add_action( 'plugins_loaded', function (): void {
 	\Counter\Container::instance()->get( \Counter\Services\PageRouter::class )->register();
+	// CategoryRouter registers product_cat taxonomy + /c/{slug}/ rewrite
+	// only when Counter is the storefront engine. Same activation guard
+	// PageRouter uses; both no-op in Unlocked mode.
+	\Counter\Container::instance()->get( \Counter\Services\CategoryRouter::class )->register();
 }, 25 );
 
 // Flush rewrite rules on activation so /p/{slug} and /product/{slug}/
@@ -934,6 +944,12 @@ register_activation_hook( __FILE__, function (): void {
 	// whichever page builder is active.
 	if ( \Counter\Container::instance()->has( \Counter\Services\PageRouter::class ) ) {
 		\Counter\Container::instance()->get( \Counter\Services\PageRouter::class )->rewrites();
+	}
+	// Same for CategoryRouter — its `/c/{slug}/` rule needs to land in the
+	// rewrite cache on activation, not on the first `init` after.
+	if ( \Counter\Container::instance()->has( \Counter\Services\CategoryRouter::class ) ) {
+		\Counter\Container::instance()->get( \Counter\Services\CategoryRouter::class )->registerTaxonomy();
+		\Counter\Container::instance()->get( \Counter\Services\CategoryRouter::class )->addRewrites();
 	}
 	flush_rewrite_rules();
 } );
