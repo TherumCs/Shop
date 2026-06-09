@@ -40,20 +40,71 @@ final class PageRouter {
 	) {}
 
 	public function register(): void {
-		if ( ! Mode::isPure() ) return;
+		if ( ! self::isActive() ) return;
 
 		add_action( 'init',               [ $this, 'rewrites' ] );
 		add_filter( 'query_vars',         [ $this, 'queryVars' ] );
-		add_filter( 'template_include',   [ $this, 'templateInclude' ] );
+		// Priority 99 so Counter wins against WooCommerce's template
+		// loader (runs at default 10) when both register the filter.
+		// Counter still returns the input $template untouched when no
+		// matching Page exists, so WC keeps its templates everywhere
+		// outside the routes Counter owns.
+		add_filter( 'template_include',   [ $this, 'templateInclude' ], 99 );
+	}
+
+	/**
+	 * Whether Counter should own the storefront URLs (/shop/, /product/{slug},
+	 * /cart/, /checkout/, /order-received/). True in Pure mode by default,
+	 * but the `counter_storefront_takeover` filter lets Woo-mode and
+	 * theme-driven setups (e.g. Moderno) opt in without flipping Mode.
+	 *
+	 * Themes / mu-plugins enable Counter as the storefront engine with:
+	 *
+	 *     add_filter( 'counter_storefront_takeover', '__return_true' );
+	 *
+	 * counter.php auto-enables it for the Moderno theme so the product /
+	 * cart / checkout pages render through Counter while the theme paints
+	 * the surrounding chrome via get_header() / get_footer().
+	 */
+	public static function isActive(): bool {
+		return Mode::isPure() || (bool) apply_filters( 'counter_storefront_takeover', false );
 	}
 
 	public function rewrites(): void {
 		add_rewrite_rule( '^p/([^/]+)/?$',        'index.php?shop_pure=$matches[1]',          'top' );
 		add_rewrite_rule( '^product/([^/]+)/?$',  'index.php?shop_pure_product=$matches[1]',  'top' );
-		add_rewrite_rule( '^shop/?$',             'index.php?shop_pure_archive=1',            'top' );
+		// /shop/ only when the merchant hasn't picked a custom shop page —
+		// otherwise their chosen page (theme template) renders normally.
+		if ( self::shopMode() === 'counter' ) {
+			add_rewrite_rule( '^shop/?$',         'index.php?shop_pure_archive=1',            'top' );
+		}
 		add_rewrite_rule( '^cart/?$',             'index.php?shop_pure_cart=1',               'top' );
 		add_rewrite_rule( '^checkout/?$',         'index.php?shop_pure_checkout=1',           'top' );
 		add_rewrite_rule( '^order-received/?$',   'index.php?shop_pure_received=1',           'top' );
+	}
+
+	/**
+	 * Shop page mode: 'counter' for the built-in /shop/ archive, or a
+	 * numeric string holding a WP Page ID the merchant has chosen as
+	 * the storefront landing.
+	 */
+	public static function shopMode(): string {
+		return (string) get_option( 'counter_shop_page', 'counter' );
+	}
+
+	/**
+	 * Resolve the URL Counter should send "Shop" links to. Honors the
+	 * counter_shop_page setting: built-in /shop/, or the permalink of
+	 * the WP Page the merchant selected. Code that emits storefront
+	 * links (theme bridges, menu items, "View all" CTAs) calls this
+	 * instead of hardcoding /shop/.
+	 */
+	public static function shopUrl(): string {
+		$mode = self::shopMode();
+		if ( $mode === 'counter' ) return home_url( '/shop/' );
+		$id = (int) $mode;
+		$url = $id > 0 ? get_permalink( $id ) : false;
+		return $url ?: home_url( '/shop/' );
 	}
 
 	/**
@@ -100,7 +151,7 @@ final class PageRouter {
 		}
 
 		$archive = get_query_var( 'counter_pure_archive' );
-		if ( $archive !== '' ) {
+		if ( $archive !== '' && self::shopMode() === 'counter' ) {
 			return $this->pages->findByAssignment( 'product-archive' );
 		}
 

@@ -42,6 +42,39 @@ abstract class TaxonomyOrderPage {
 	abstract protected function getTerms(): array;
 
 	/**
+	 * Shared sub-tab strip across the three Order pages. Categories /
+	 * Variants live on their own slugs; Vendors and Collections are two
+	 * modes of the custom-taxonomy page (?taxonomy=…).
+	 */
+	protected static function renderOrderSubTabs(): void {
+		$current_page     = sanitize_key( (string) ( $_GET['page'] ?? '' ) );
+		$current_taxonomy = sanitize_key( (string) ( $_GET['taxonomy'] ?? '' ) );
+		$tabs = [
+			[ 'Categories',  'counter-categories-order', '' ],
+			[ 'Variants',    'counter-variants-order',   '' ],
+			[ 'Vendors',     'counter-taxonomies',       'vendors' ],
+			[ 'Collections', 'counter-taxonomies',       'collections' ],
+		];
+		?>
+		<nav class="counter-admin__tabs counter-admin__tabs--sub" aria-label="<?php esc_attr_e( 'Order', 'counter' ); ?>">
+			<?php foreach ( $tabs as [ $label, $slug, $taxonomy ] ):
+				$is_active = ( $slug === $current_page )
+					&& ( $taxonomy === '' || $taxonomy === $current_taxonomy
+						|| ( $taxonomy === 'vendors' && $current_taxonomy === '' ) );
+				$args = [ 'page' => $slug ];
+				if ( $taxonomy !== '' ) $args['taxonomy'] = $taxonomy;
+				$url = add_query_arg( $args, admin_url( 'admin.php' ) );
+				?>
+				<a
+					class="counter-admin__tab <?php echo $is_active ? 'is-active' : ''; ?>"
+					href="<?php echo esc_url( $url ); ?>"
+				><?php echo esc_html( $label ); ?></a>
+			<?php endforeach; ?>
+		</nav>
+		<?php
+	}
+
+	/**
 	 * Render the admin page.
 	 */
 	public function render(): void {
@@ -67,10 +100,11 @@ abstract class TaxonomyOrderPage {
 
 			<h1 class="counter-admin__title">
 				<span class="counter-admin__mark">T</span>
-				<?php echo esc_html( $this->getPageTitle() ); ?>
+				<?php esc_html_e( 'Order', 'counter' ); ?>
 				<span class="counter-admin__version">v<?php echo esc_html( COUNTER_VERSION ); ?></span>
 			</h1>
 			<?php SectionTabs::render( sanitize_key( (string) ( $_GET['page'] ?? '' ) ) ); ?>
+			<?php self::renderOrderSubTabs(); ?>
 
 			<p class="counter-admin__description"><?php echo esc_html( $this->getDescription() ); ?></p>
 

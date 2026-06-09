@@ -38,6 +38,9 @@ final class SettingsPage {
 
 		// Provider key groups — register once per request, idempotent.
 		foreach ( [
+			'counter_square'  => [ 'counter_square_access_token', 'counter_square_location_id', 'counter_square_environment' ],
+			'counter_paypal'  => [ 'counter_paypal_client_id', 'counter_paypal_client_secret', 'counter_paypal_environment' ],
+			'counter_plaid'   => [ 'counter_plaid_client_id', 'counter_plaid_secret', 'counter_plaid_environment' ],
 			'counter_sezzle'  => [ 'counter_sezzle_public_key', 'counter_sezzle_private_key', 'counter_sezzle_environment' ],
 			'counter_zip'     => [ 'counter_zip_merchant_id', 'counter_zip_api_key', 'counter_zip_environment' ],
 			'counter_anypay'  => [ 'counter_anypay_api_key', 'counter_anypay_environment' ],
@@ -49,6 +52,15 @@ final class SettingsPage {
 			}
 		}
 
+		$square_token = (string) get_option( 'counter_square_access_token', '' );
+		$square_loc   = (string) get_option( 'counter_square_location_id', '' );
+		$square_env   = (string) get_option( 'counter_square_environment', 'live' );
+		$paypal_id    = (string) get_option( 'counter_paypal_client_id', '' );
+		$paypal_sec   = (string) get_option( 'counter_paypal_client_secret', '' );
+		$paypal_env   = (string) get_option( 'counter_paypal_environment', 'live' );
+		$plaid_id     = (string) get_option( 'counter_plaid_client_id', '' );
+		$plaid_sec    = (string) get_option( 'counter_plaid_secret', '' );
+		$plaid_env    = (string) get_option( 'counter_plaid_environment', 'sandbox' );
 		$sezzle_pub  = (string) get_option( 'counter_sezzle_public_key', '' );
 		$sezzle_prv  = (string) get_option( 'counter_sezzle_private_key', '' );
 		$sezzle_env  = (string) get_option( 'counter_sezzle_environment', 'live' );
@@ -62,6 +74,9 @@ final class SettingsPage {
 		$shoppay_mode= (string) get_option( 'counter_shop_pay_mode', 'stripe_link' );
 		$shoppay_store= (string) get_option( 'counter_shop_pay_shopify_store', '' );
 		$shoppay_tok = (string) get_option( 'counter_shop_pay_shopify_storefront_token', '' );
+
+		$shop_page    = (string) get_option( 'counter_shop_page', 'counter' );
+		$shop_pages   = get_pages( [ 'sort_column' => 'post_title', 'post_status' => 'publish' ] );
 
 		?>
 		<div class="wrap counter-admin">
@@ -116,7 +131,43 @@ final class SettingsPage {
 								<?php endforeach; ?>
 							</select>
 							<p class="description">
-								<?php esc_html_e( 'Where the persistent cart button anchors on the page. Only used when presentation includes a floating button (Studio, Vitrine).', 'shop' ); ?>
+								<?php esc_html_e( 'Where the persistent cart button anchors on the page. Only used when presentation includes a floating button (Studio, Vitrine).', 'counter' ); ?>
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="counter-admin__section">
+					<header>
+						<h2><?php esc_html_e( 'Storefront', 'counter' ); ?></h2>
+						<p><?php esc_html_e( 'Pick the landing page customers see when they click "Shop". Counter\'s built-in /shop/ renders the SQLite catalog in your theme\'s chrome; or point to a page you built in your theme (e.g. a Moderno shop page) and that template renders instead. Cart, checkout, and product pages stay on Counter regardless.', 'counter' ); ?></p>
+					</header>
+
+					<div class="counter-admin__row">
+						<label for="counter_shop_page"><?php esc_html_e( 'Shop page', 'counter' ); ?></label>
+						<div>
+							<select name="counter_shop_page" id="counter_shop_page">
+								<option value="counter" <?php selected( $shop_page, 'counter' ); ?>>
+									<?php esc_html_e( 'Counter built-in (/shop/)', 'counter' ); ?>
+								</option>
+								<?php foreach ( $shop_pages as $p ) : ?>
+									<option value="<?php echo esc_attr( (string) $p->ID ); ?>" <?php selected( $shop_page, (string) $p->ID ); ?>>
+										<?php echo esc_html( $p->post_title ?: sprintf( '(no title — #%d)', $p->ID ) ); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+							<?php
+							$current_url = \Counter\Services\PageRouter::shopUrl();
+							?>
+							<p class="counter-admin__current-url">
+								<span class="counter-admin__current-url-label"><?php esc_html_e( 'Current shop URL:', 'counter' ); ?></span>
+								<a href="<?php echo esc_url( $current_url ); ?>" target="_blank" rel="noopener" class="counter-admin__current-url-link">
+									<code><?php echo esc_html( $current_url ); ?></code>
+									<span aria-hidden="true">↗</span>
+								</a>
+							</p>
+							<p class="description">
+								<?php esc_html_e( 'Every "Shop" link Counter emits points here. After changing the dropdown and saving, visit any admin page once so Counter rebuilds its rewrite cache.', 'counter' ); ?>
 							</p>
 						</div>
 					</div>
@@ -211,6 +262,91 @@ final class SettingsPage {
 				</div>
 
 				<?php submit_button( __( 'Save Stripe keys', 'counter' ) ); ?>
+			</form>
+
+			<form method="post" action="options.php" class="counter-admin__form counter-admin__form--secondary">
+				<?php settings_fields( 'counter_square' ); ?>
+				<div class="counter-admin__section" id="provider-square">
+					<header>
+						<h2><?php esc_html_e( 'Square', 'counter' ); ?></h2>
+						<p><?php esc_html_e( 'Paste a Square access token from developer.squareup.com. Counter routes card and wallet payments through Square when connected.', 'counter' ); ?></p>
+					</header>
+					<div class="counter-admin__row">
+						<label for="counter_square_access_token"><?php esc_html_e( 'Access token', 'counter' ); ?></label>
+						<div><input type="password" name="counter_square_access_token" id="counter_square_access_token" value="<?php echo esc_attr( $square_token ); ?>" placeholder="EAAA…" autocomplete="off" spellcheck="false"></div>
+					</div>
+					<div class="counter-admin__row">
+						<label for="counter_square_location_id"><?php esc_html_e( 'Location ID', 'counter' ); ?></label>
+						<div><input type="text" name="counter_square_location_id" id="counter_square_location_id" value="<?php echo esc_attr( $square_loc ); ?>" placeholder="LXXXXXXXXXXXX" autocomplete="off"></div>
+					</div>
+					<div class="counter-admin__row">
+						<label for="counter_square_environment"><?php esc_html_e( 'Environment', 'counter' ); ?></label>
+						<div>
+							<select name="counter_square_environment" id="counter_square_environment">
+								<option value="live"    <?php selected( $square_env, 'live' ); ?>>Live</option>
+								<option value="sandbox" <?php selected( $square_env, 'sandbox' ); ?>>Sandbox</option>
+							</select>
+						</div>
+					</div>
+				</div>
+				<?php submit_button( __( 'Save Square', 'counter' ) ); ?>
+			</form>
+
+			<form method="post" action="options.php" class="counter-admin__form counter-admin__form--secondary">
+				<?php settings_fields( 'counter_paypal' ); ?>
+				<div class="counter-admin__section" id="provider-paypal">
+					<header>
+						<h2><?php esc_html_e( 'PayPal', 'counter' ); ?></h2>
+						<p><?php esc_html_e( 'Paste a REST app client ID and secret from developer.paypal.com. Enables PayPal, Venmo, and Pay Later at checkout.', 'counter' ); ?></p>
+					</header>
+					<div class="counter-admin__row">
+						<label for="counter_paypal_client_id"><?php esc_html_e( 'Client ID', 'counter' ); ?></label>
+						<div><input type="text" name="counter_paypal_client_id" id="counter_paypal_client_id" value="<?php echo esc_attr( $paypal_id ); ?>" autocomplete="off" spellcheck="false"></div>
+					</div>
+					<div class="counter-admin__row">
+						<label for="counter_paypal_client_secret"><?php esc_html_e( 'Client secret', 'counter' ); ?></label>
+						<div><input type="password" name="counter_paypal_client_secret" id="counter_paypal_client_secret" value="<?php echo esc_attr( $paypal_sec ); ?>" autocomplete="off" spellcheck="false"></div>
+					</div>
+					<div class="counter-admin__row">
+						<label for="counter_paypal_environment"><?php esc_html_e( 'Environment', 'counter' ); ?></label>
+						<div>
+							<select name="counter_paypal_environment" id="counter_paypal_environment">
+								<option value="live"    <?php selected( $paypal_env, 'live' ); ?>>Live</option>
+								<option value="sandbox" <?php selected( $paypal_env, 'sandbox' ); ?>>Sandbox</option>
+							</select>
+						</div>
+					</div>
+				</div>
+				<?php submit_button( __( 'Save PayPal', 'counter' ) ); ?>
+			</form>
+
+			<form method="post" action="options.php" class="counter-admin__form counter-admin__form--secondary">
+				<?php settings_fields( 'counter_plaid' ); ?>
+				<div class="counter-admin__section" id="provider-plaid">
+					<header>
+						<h2><?php esc_html_e( 'Plaid', 'counter' ); ?></h2>
+						<p><?php esc_html_e( 'Powers Pay-by-Bank (ACH). Paste a client ID and secret from dashboard.plaid.com.', 'counter' ); ?></p>
+					</header>
+					<div class="counter-admin__row">
+						<label for="counter_plaid_client_id"><?php esc_html_e( 'Client ID', 'counter' ); ?></label>
+						<div><input type="text" name="counter_plaid_client_id" id="counter_plaid_client_id" value="<?php echo esc_attr( $plaid_id ); ?>" autocomplete="off" spellcheck="false"></div>
+					</div>
+					<div class="counter-admin__row">
+						<label for="counter_plaid_secret"><?php esc_html_e( 'Secret', 'counter' ); ?></label>
+						<div><input type="password" name="counter_plaid_secret" id="counter_plaid_secret" value="<?php echo esc_attr( $plaid_sec ); ?>" autocomplete="off" spellcheck="false"></div>
+					</div>
+					<div class="counter-admin__row">
+						<label for="counter_plaid_environment"><?php esc_html_e( 'Environment', 'counter' ); ?></label>
+						<div>
+							<select name="counter_plaid_environment" id="counter_plaid_environment">
+								<option value="production"  <?php selected( $plaid_env, 'production' ); ?>>Production</option>
+								<option value="development" <?php selected( $plaid_env, 'development' ); ?>>Development</option>
+								<option value="sandbox"     <?php selected( $plaid_env, 'sandbox' ); ?>>Sandbox</option>
+							</select>
+						</div>
+					</div>
+				</div>
+				<?php submit_button( __( 'Save Plaid', 'counter' ) ); ?>
 			</form>
 
 			<form method="post" action="options.php" class="counter-admin__form counter-admin__form--secondary">

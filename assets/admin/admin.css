@@ -515,9 +515,11 @@
 	font-style: italic;
 }
 
-/* Tabs — Milieus look: 24px gap, generous padding, 14px label. */
+/* Tabs — Milieus look: generous padding, 14px label. Single global strip
+   across every Counter page, so it wraps gracefully when the admin pane
+   gets narrow. */
 .counter-admin__tabs {
-	display: flex; gap: 24px;
+	display: flex; flex-wrap: wrap; gap: 4px 22px;
 	margin: 16px 0 28px;
 	border-bottom: 1px solid #dcdcde;
 }
@@ -557,6 +559,37 @@
 .counter-admin__tabs--sub .counter-admin__tab {
 	padding: 8px 2px;
 	font-size: 13px;
+}
+
+/* "Current URL" chip — sits under the Shop-page picker so the merchant
+   sees exactly which URL Counter will link to without saving first. */
+.counter-admin__current-url {
+	display: inline-flex; align-items: center; gap: 6px;
+	margin: 8px 0 4px;
+	padding: 4px 10px;
+	background: rgba(16, 185, 129, 0.08);
+	border: 1px solid rgba(16, 185, 129, 0.2);
+	border-radius: 999px;
+	font-size: 12px;
+	color: #065f46;
+}
+.counter-admin__current-url-label {
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	font-size: 10px;
+	color: #047857;
+}
+.counter-admin__current-url-link {
+	display: inline-flex; align-items: center; gap: 4px;
+	text-decoration: none; color: #065f46;
+}
+.counter-admin__current-url-link:hover { color: #047857; text-decoration: underline; }
+.counter-admin__current-url-link code {
+	background: transparent;
+	padding: 0;
+	font-family: var(--counter-mono);
+	color: inherit;
 }
 
 /* Split layout — left form (narrow) + right list (wide). Used by the

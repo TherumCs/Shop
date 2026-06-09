@@ -70,6 +70,7 @@ final class DashboardPage {
 				<?php esc_html_e( 'Dashboard', 'counter' ); ?>
 				<span class="counter-admin__version">v<?php echo esc_html( COUNTER_VERSION ); ?></span>
 			</h1>
+			<?php SectionTabs::render( 'counter' ); ?>
 
 			<div class="counter-bento">
 

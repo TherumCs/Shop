@@ -1,16 +1,13 @@
 <?php
 /**
- * Counter by Therum — section-level tab strip.
+ * Counter by Therum — global tab strip.
  *
- * Mirrors the sidebar grouping (Commerce / Manage Data / Organization /
- * Integrations / Settings) as horizontal tabs at the top of each page.
- * The active page's section determines which set of tabs to render.
+ * One horizontal strip with every Counter page, rendered identically
+ * across all pages. The active tab is auto-detected from $current_slug.
  *
  * Pages call `SectionTabs::render( $current_slug );` once, right under
- * the `<h1>` of the wrap. The active tab is auto-detected from the slug.
- *
- * Single source of truth for the structure: change the array here and
- * every page picks it up.
+ * the `<h1>` of the wrap. Single source of truth — change the array
+ * here and every page picks it up.
  */
 
 namespace Counter\Admin;
@@ -20,76 +17,42 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 final class SectionTabs {
 
 	/**
-	 * Section → list of [ slug, label ] tabs.
-	 * Slug matches the admin page's `?page=` value.
+	 * Ordered list of [ slug, label ] tabs. Renders left-to-right on
+	 * every page. Slug matches the admin page's `?page=` value.
 	 */
-	private const SECTIONS = [
-		'commerce' => [
-			'label' => 'Commerce',
-			'tabs'  => [
-				[ 'counter-products',   'Products' ],
-				[ 'counter-orders',     'Orders' ],
-				[ 'counter-customers',  'Customers' ],
-				[ 'counter-categories', 'Categories' ],
-			],
-		],
-		'manage' => [
-			'label' => 'Manage Data',
-			'tabs'  => [
-				[ 'counter-import',  'Import / Export' ],
-				[ 'counter-updates', 'Updates' ],
-			],
-		],
-		'organization' => [
-			'label' => 'Organization',
-			'tabs'  => [
-				[ 'counter-categories-order', 'Category Order' ],
-				[ 'counter-variants-order',   'Variant Order' ],
-				[ 'counter-taxonomies',       'Taxonomy Order' ],
-			],
-		],
-		'payments' => [
-			'label' => 'Payments',
-			'tabs'  => [
-				[ 'counter-studio-pay', 'Payments' ],
-			],
-		],
-		'settings' => [
-			'label' => 'Settings',
-			'tabs'  => [
-				[ 'counter-settings', 'Settings' ],
-			],
-		],
+	private const TABS = [
+		[ 'counter-products',         'Products' ],
+		[ 'counter-orders',           'Orders' ],
+		[ 'counter-customers',        'Customers' ],
+		[ 'counter-categories',       'Categories' ],
+		[ 'counter-import',           'Import / Export' ],
+		[ 'counter-updates',          'Updates' ],
+		[ 'counter-categories-order', 'Order' ],
+		[ 'counter-studio-pay',       'Payments' ],
+		[ 'counter-settings',         'Settings' ],
 	];
 
-	/** Slug → section key. Built once per request. */
-	private static array $slug_to_section = [];
-
-	/** Lazy-build the reverse index. */
-	private static function index(): array {
-		if ( self::$slug_to_section ) return self::$slug_to_section;
-		foreach ( self::SECTIONS as $section_key => $section ) {
-			foreach ( $section['tabs'] as [ $slug, ] ) {
-				self::$slug_to_section[ $slug ] = $section_key;
-			}
-		}
-		return self::$slug_to_section;
-	}
+	/**
+	 * Slugs that all live under the "Order" tab — Variants and Taxonomies
+	 * are hidden from the sidebar and sit as sub-tabs inside the unified
+	 * Order page. Keep the parent highlighted on all three.
+	 */
+	private const ORDER_ALIASES = [
+		'counter-categories-order',
+		'counter-variants-order',
+		'counter-taxonomies',
+	];
 
 	/**
-	 * Render the tab strip for the section containing $current_slug.
-	 * Echoes directly so it can drop into a render() flow.
+	 * Render the global tab strip. Echoes directly so it can drop into
+	 * a render() flow.
 	 */
 	public static function render( string $current_slug ): void {
-		$index = self::index();
-		$section_key = $index[ $current_slug ] ?? null;
-		if ( $section_key === null ) return;
-
-		$section = self::SECTIONS[ $section_key ];
 		?>
-		<nav class="counter-admin__tabs" aria-label="<?php echo esc_attr( $section['label'] ); ?>">
-			<?php foreach ( $section['tabs'] as [ $slug, $label ] ):
-				$is_active = $slug === $current_slug;
+		<nav class="counter-admin__tabs" aria-label="<?php esc_attr_e( 'Counter', 'counter' ); ?>">
+			<?php foreach ( self::TABS as [ $slug, $label ] ):
+				$is_active = ( $slug === $current_slug )
+					|| ( $slug === 'counter-categories-order' && in_array( $current_slug, self::ORDER_ALIASES, true ) );
 				$url = admin_url( 'admin.php?page=' . $slug );
 				?>
 				<a

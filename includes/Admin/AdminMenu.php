@@ -155,18 +155,21 @@ final class AdminMenu {
 			callback:    [ $this->updates, 'render' ],
 		);
 
-		// Taxonomy ordering — manage term display order hierarchically.
+		// Unified Order hub — one sidebar entry that owns Categories,
+		// Variants, Vendors, and Collections via sub-tabs. The two
+		// sibling slugs stay registered (parent_slug:null) so existing
+		// bookmarks and the sub-tab links keep resolving.
 		add_submenu_page(
 			parent_slug: 'counter',
-			page_title:  __( 'Category Order', 'counter' ),
-			menu_title:  __( 'Category Order', 'counter' ),
+			page_title:  __( 'Order', 'counter' ),
+			menu_title:  __( 'Order', 'counter' ),
 			capability:  'manage_options',
 			menu_slug:   'counter-categories-order',
 			callback:    [ $this->categoryOrder, 'render' ],
 		);
 
 		add_submenu_page(
-			parent_slug: 'counter',
+			parent_slug: null,
 			page_title:  __( 'Variant Order', 'counter' ),
 			menu_title:  __( 'Variant Order', 'counter' ),
 			capability:  'manage_options',
@@ -175,7 +178,7 @@ final class AdminMenu {
 		);
 
 		add_submenu_page(
-			parent_slug: 'counter',
+			parent_slug: null,
 			page_title:  __( 'Taxonomy Order', 'counter' ),
 			menu_title:  __( 'Taxonomy Order', 'counter' ),
 			capability:  'manage_options',
@@ -235,56 +238,59 @@ final class AdminMenu {
 			if ( $item !== null ) $organized[] = $item;
 		};
 
-		// Dashboard first — it's the landing page, no section header.
+		// Flat ordered list — section headers were inert pseudo-rows that
+		// confused merchants. The global top-tab strip groups visually.
 		$add( $pick( 'counter' ) );
-
-		$organized[] = $section( 'COMMERCE' );
 		$add( $pick( 'counter-products' ) );
 		$add( $pick( 'counter-orders' ) );
 		$add( $pick( 'counter-customers' ) );
 		$add( $pick( 'counter-categories' ) );
-
-		$organized[] = $section( 'MANAGE DATA' );
 		$add( $pick( 'counter-import' ) );
 		$add( $pick( 'counter-updates' ) );
-
-		$organized[] = $section( 'ORGANIZATION' );
 		$add( $pick( 'counter-categories-order' ) );
-		$add( $pick( 'counter-variants-order' ) );
-		$add( $pick( 'counter-taxonomies' ) );
-
-		$organized[] = $section( 'PAYMENTS' );
 		$add( $pick( 'counter-studio-pay' ) );
-
-		$organized[] = $section( 'SETTINGS' );
 		$add( $pick( 'counter-settings' ) );
 
 		$submenu['counter'] = $organized;
 
-		// Add CSS to render section headers
+		// Render section headers as inert labels — the rows still come
+		// through WP's submenu pipeline (so they sit in the right spot in
+		// the sidebar), but we strip click behavior. Targeting by href is
+		// reliable because WP builds it from the menu_slug we set, and
+		// our section slugs are unique to these rows.
 		add_action( 'admin_head', function () {
-			echo '<style>
-				#adminmenu .counter-menu-section-title {
+			?>
+			<style>
+				#adminmenu li a[href$="page=counter-menu-section-title"] {
 					padding: 12px 16px;
 					font-size: 11px;
 					font-weight: 700;
 					text-transform: uppercase;
 					letter-spacing: 0.5px;
-					color: #9ca3af;
-					background: #f9fafb;
+					color: #9ca3af !important;
+					background: #f9fafb !important;
 					margin: 16px 0 8px 0;
 					border-top: 1px solid #e5e7eb;
 					cursor: default;
+					pointer-events: none;
 				}
-				#adminmenu .counter-menu-section-title:first-child {
-					border-top: none;
-					margin-top: 0;
+				#adminmenu li a[href$="page=counter-menu-section-title"]:hover {
+					background: #f9fafb !important;
+					color: #9ca3af !important;
 				}
-				#adminmenu .counter-menu-section-title:hover {
-					background: #f9fafb;
-					color: #9ca3af;
-				}
-			</style>';
+			</style>
+			<script>
+				( function () {
+					document.querySelectorAll(
+						'#adminmenu a[href$="page=counter-menu-section-title"]'
+					).forEach( function ( a ) {
+						a.removeAttribute( 'href' );
+						a.setAttribute( 'tabindex', '-1' );
+						a.setAttribute( 'aria-disabled', 'true' );
+					} );
+				} )();
+			</script>
+			<?php
 		} );
 	}
 

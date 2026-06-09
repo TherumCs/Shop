@@ -46,20 +46,11 @@ final class CustomTaxonomyOrderPage extends TaxonomyOrderPage {
 
 			<h1 class="counter-admin__title">
 				<span class="counter-admin__mark">T</span>
-				<?php echo esc_html( $this->getPageTitle() ); ?>
+				<?php esc_html_e( 'Order', 'counter' ); ?>
 				<span class="counter-admin__version">v<?php echo esc_html( COUNTER_VERSION ); ?></span>
 			</h1>
-
-			<div class="counter-taxonomy-order__tabs">
-				<a href="?page=counter-taxonomies&taxonomy=vendors"
-					class="nav-tab <?php echo $this->activeTaxonomy === 'vendors' ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Vendors', 'counter' ); ?>
-				</a>
-				<a href="?page=counter-taxonomies&taxonomy=collections"
-					class="nav-tab <?php echo $this->activeTaxonomy === 'collections' ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Collections', 'counter' ); ?>
-				</a>
-			</div>
+			<?php SectionTabs::render( 'counter-taxonomies' ); ?>
+			<?php self::renderOrderSubTabs(); ?>
 
 			<p class="counter-admin__description"><?php echo esc_html( $this->getDescription() ); ?></p>
 

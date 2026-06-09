@@ -3,7 +3,7 @@
  * Plugin Name:       Counter by Therum
  * Plugin URI:        https://therum.studio/plugins/counter
  * Description:       A native commerce engine built for speed. One product entity with capability toggles (variants, shipping, digital delivery, POD routing), purpose-built SQLite schema, unified cart/checkout session, typed events + pipelines instead of hook spam. Pluggable payment, tax, shipping, and fulfillment providers via Nexus by Therum.
- * Version:           0.29.0
+ * Version:           0.43.2
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Author:            Therum Creative Studios
@@ -98,6 +98,26 @@ add_action( 'before_woocommerce_init', function (): void {
 //  Bootstrap
 // ──────────────────────────────────────────────────────────────────────────
 
+// Counter owns the storefront URLs by default: /shop/, /product/{slug},
+// /cart/, /checkout/, /order-received/. The host theme still paints the
+// surrounding header + footer via get_header()/get_footer() in
+// pure-page.php, so the site looks like the theme while products,
+// cart, and checkout come out of Counter.
+//
+// Opinion: when Counter is installed, Counter runs commerce. Themes
+// that ship their own product / cart / checkout templates (Woo themes,
+// e-com builders) lose those surfaces to Counter — which is the point.
+//
+// Merchants who want the theme's templates back drop one line in a
+// child theme or mu-plugin:
+//
+//     add_filter( 'counter_storefront_takeover', '__return_false' );
+//
+// Pure mode already implies takeover via PageRouter::isActive(), so
+// this filter only matters for Woo / Bricks / Elementor / theme-driven
+// setups. Priority 5 so explicit opt-outs at default priority 10 win.
+add_filter( 'counter_storefront_takeover', '__return_true', 5 );
+
 // Run migrations on activation — creates the SQLite file + schema on first install.
 register_activation_hook( __FILE__, [ \Counter\Migrations::class, 'run' ] );
 
@@ -133,6 +153,30 @@ add_action( 'admin_init', function (): void {
 	$source = get_option( 'counter_product_source' );
 	if ( $source === false && ( defined( 'WC_VERSION' ) || function_exists( 'wc_get_product' ) ) ) {
 		update_option( 'counter_product_source', 'woo' );
+	}
+
+	// First-run template seed when Counter owns the storefront. PageRouter
+	// resolves /shop/, /product/{slug}, /cart/, /checkout/ to Pages with
+	// the matching assignment — without these defaults the router falls
+	// through and the host theme's empty Woo templates render instead.
+	// Idempotent: TemplateSeeder::seedAll() only writes when no template
+	// is already assigned for that slot.
+	$storefront_seeded = (bool) get_option( 'counter_storefront_seeded' );
+	if ( ! $storefront_seeded && \Counter\Services\PageRouter::isActive() ) {
+		try {
+			\Counter\Container::instance()
+				->get( \Counter\Services\TemplateSeeder::class )
+				->seedAll();
+			// Counter just added /shop/, /product/{slug}, /cart/,
+			// /checkout/, /order-received/ rewrites via PageRouter::rewrites().
+			// They won't match real requests until WP rebuilds its cached
+			// rule set — do it once, here, so the first front-end click
+			// after activation isn't a 404.
+			flush_rewrite_rules( false );
+			update_option( 'counter_storefront_seeded', true );
+		} catch ( \Throwable $e ) {
+			error_log( 'Counter storefront template seed failed: ' . $e->getMessage() );
+		}
 	}
 
 	// Auto-import existing WooCommerce orders on first setup
@@ -728,6 +772,21 @@ add_action( 'wp_enqueue_scripts', function (): void {
 	wp_enqueue_style(  'counter-cart' );
 	wp_enqueue_script( 'counter-cart' );
 
+	// Theme bridges — repaint Counter's tokens with the host theme's so
+	// the cart drawer + checkout inherit the surrounding look. Markup,
+	// routing, payment flow stay 100% Counter; this is CSS-only.
+	// Match on `get_template()` so child themes (e.g. moderno-child)
+	// inherit the bridge too.
+	if ( get_template() === 'moderno' ) {
+		wp_register_style(
+			'counter-theme-moderno',
+			COUNTER_URL . 'assets/themes/moderno-bridge.css',
+			[ 'counter-cart' ],
+			COUNTER_VERSION,
+		);
+		wp_enqueue_style( 'counter-theme-moderno' );
+	}
+
 	// Elements CSS + JS — small, always enqueued so pages with any
 	// Shop element render styled out of the box. Elements that need
 	// interactivity (Gallery, VariantPicker, AddToCart) live in
@@ -880,6 +939,30 @@ add_action( 'admin_init', function (): void {
 				: 'bottom-right';
 		},
 	] );
+
+	// Shop page source — Counter's built-in /shop/ template, OR a WP Page
+	// the merchant has already built (e.g. a Moderno shop page). When set
+	// to a page ID, PageRouter no longer takes over /shop/, the page's
+	// own template renders, and `Counter\Services\PageRouter::shopUrl()`
+	// returns that page's permalink so Counter-emitted "Shop" links
+	// follow the choice. Cart, checkout, and product routes stay on
+	// Counter regardless.
+	register_setting( 'counter_appearance', 'counter_shop_page', [
+		'type'              => 'string',
+		'default'           => 'counter',
+		'sanitize_callback' => function ( $v ) {
+			$v = (string) $v;
+			if ( $v === 'counter' || $v === '' ) return 'counter';
+			$id = (int) $v;
+			return $id > 0 && get_post( $id ) ? (string) $id : 'counter';
+		},
+	] );
+	// Flush rewrites whenever the shop-page setting actually changes —
+	// /shop/ either gains or loses its rule, and WP needs to rebuild
+	// the cached rule set before the next request matches.
+	add_action( 'update_option_counter_shop_page', function ( $old, $new ): void {
+		if ( $old !== $new ) flush_rewrite_rules( false );
+	}, 10, 2 );
 
 	// Catalog source — native (our SQLite) or woo (read WooCommerce in place).
 	// First-install default is computed at container bind time based on

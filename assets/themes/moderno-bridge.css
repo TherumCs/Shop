@@ -1,0 +1,52 @@
+/*
+ * Counter ↔ Moderno theme bridge.
+ *
+ * Reassigns Counter's cart/checkout design tokens to Moderno's, so the
+ * cart drawer + checkout page inherit Moderno's accent, typography,
+ * surface, and border colors. Layout, markup, and behavior stay 100%
+ * Counter — this file only repaints.
+ *
+ * Moderno emits its tokens inline on :root via its Customizer:
+ *   --accent-color, --button-color, --button-color-hover,
+ *   --text-color, --text-color-body, --text-color-light,
+ *   --background-color, --background-color-dark,
+ *   --border-color, --border-color-light, --border-color-dark,
+ *   --font-text
+ *
+ * Each remap below carries a fallback to Counter's stock value so if
+ * Moderno ever drops or renames a token, the cart still renders sanely
+ * instead of going transparent.
+ *
+ * Enqueued conditionally by counter.php only when the active theme's
+ * template is 'moderno' (i.e. Moderno or a Moderno child theme).
+ */
+
+:root {
+	/* Accent + CTAs — Moderno's button color drives the primary action
+	   so the cart's "Checkout" button matches the theme's PDP CTAs. */
+	--counter-cart-accent:        var(--button-color,        var(--accent-color, #e83b3b));
+	--counter-cart-accent-hover:  var(--button-color-hover,  var(--accent-color-dark, #c92e2e));
+	--counter-cart-accent-text:   var(--background-color,    #ffffff);
+	--counter-cart-accent-soft:   color-mix(in srgb, var(--accent-color, #e83b3b) 8%, transparent);
+
+	/* Surfaces — drawer + checkout backgrounds */
+	--counter-cart-surface:       var(--background-color,    #ffffff);
+	--counter-cart-surface-2:     color-mix(in srgb, var(--text-color, #000) 4%, var(--background-color, #ffffff));
+	--counter-cart-surface-3:     color-mix(in srgb, var(--text-color, #000) 2%, var(--background-color, #ffffff));
+
+	/* Type */
+	--counter-cart-text:          var(--text-color-body,     var(--text-color, #1a1a1a));
+	--counter-cart-text-2:        var(--text-color,          #4a4a4a);
+	--counter-cart-text-3:        var(--text-color-light,    #8a8a8a);
+	--counter-cart-font:          var(--font-text,           -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif);
+
+	/* Borders + dividers */
+	--counter-cart-border:        var(--border-color-light,  var(--border-color, rgba(0, 0, 0, 0.08)));
+	--counter-cart-border-2:      var(--border-color,        rgba(0, 0, 0, 0.16));
+
+	/* Radius — Moderno doesn't publish a canonical radius token; keep
+	   Counter's so the drawer doesn't look out of place if Moderno is
+	   running sharp corners. Override here if you want it themed. */
+	/* --counter-cart-radius:     10px; */
+	/* --counter-cart-radius-lg:  14px; */
+}

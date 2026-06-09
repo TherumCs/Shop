@@ -105,7 +105,7 @@ final class StudioPayPage {
 								? `<a class="button" href="${ window.CounterNexusUrl || '/wp-admin/admin.php?page=nexus' }">Manage in Nexus ↗</a>`
 								: p.connected
 									? `<button class="button button-link-delete" data-disconnect="${ p.id }">Disconnect</button>`
-									: `<button class="button button-primary" data-connect="${ p.id }">Connect ${ escapeHtml( p.name ) }</button>`
+									: `<a class="button button-primary" href="?page=counter-settings#provider-${ p.id }" data-setup="${ p.id }">Connect ${ escapeHtml( p.name ) }</a>`
 							}
 						</div>
 					</div>
